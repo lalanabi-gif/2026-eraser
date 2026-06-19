@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>초1 맞춤형 말하는 한글 돋보기</title>
+    <style>
+        /* 기본 화면 설정 */
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f7f9fc;
+            font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+            padding-top: 30px;
+            padding-bottom: 250px;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        /* 글자 크기 조절 버튼 영역 */
+        #font-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            width: 85%;
+            max-width: 900px;
+            justify-content: center;
+        }
+
+        .font-btn {
+            font-size: 20px;
+            font-weight: bold;
+            padding: 10px 20px;
+            background-color: white;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+            cursor: pointer;
+            color: #555;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .font-btn:hover {
+            background-color: #f0f0f0;
+            transform: scale(1.05);
+            border-color: #bbb;
+        }
+
+        /* 원고지 스타일의 텍스트 박스 */
+        #word-display {
+            text-align: left;
+            min-height: 300px;
+            height: auto;
+            width: 85%;
+            max-width: 900px;
+            word-break: keep-all;
+            padding: 40px;
+            border-radius: 10px;
+            background-color: white;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            border: 4px solid #e53935;
+            color: #333;
+            font-weight: bold;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0px;
+        }
+
+        /* 원고지 셀 스타일 */
+        #word-display .cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #ffcdd2;
+            aspect-ratio: 1 / 1;
+            box-sizing: border-box;
+        }
+
+        /* 띄어쓰기 셀 스타일 */
+        #word-display .cell.space {
+            background-color: #f0f0f0;
+        }
+
+        /* 마이크 버튼 영역 */
+        #bottom-area {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: linear-gradient(to top, #f7f9fc 70%, transparent);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: 40px;
+            padding-top: 50px;
+            z-index: 100;
+        }
+
+        /* 💡 수정된 부분: 첨부된 이미지(image_1.png)를 사용하는 새로운 마이크 이미지 버튼 스타일 */
+        #image-mic-btn {
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: auto;
+            max-width: 150px; /* 기본 최대 크기 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #image-mic-btn img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        #image-mic-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* 듣는 중 애니메이션 (이미지 버튼에 적용) */
+        #image-mic-btn.listening {
+            animation: blink-mic 1.2s infinite;
+        }
+
+        #status {
+            margin-top: 20px;
+            font-size: 22px;
+            font-weight: bold;
+            color: #666;
+            height: 30px;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; transform: scale(1.05); }
+            50% { opacity: 0.6; transform: scale(1); }
+            100% { opacity: 1; transform: scale(1.05); }
+        }
+
+        @keyframes blink-mic {
+            0% { opacity: 1; transform: scale(1.05); }
+            50% { opacity: 0.7; transform: scale(1); }
+            100% { opacity: 1; transform: scale(1.05); }
+        }
+
+        /* 반응형 디자인 미디어 쿼리 */
+        @media screen and (min-width: 1024px) {
+            body { padding-top: 50px; padding-bottom: 280px; }
+            #font-controls { width: 90%; gap: 20px; }
+            .font-btn { font-size: 22px; padding: 12px 25px; }
+            #word-display { width: 90%; padding: 50px; min-height: 400px; }
+            #image-mic-btn { max-width: 180px; } /* 태블릿 등 넓은 화면에서 크기 조절 */
+            #status { font-size: 24px; margin-top: 25px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="font-controls">
+        <button class="font-btn" id="font-down">🔍 ➖ 작게</button>
+        <button class="font-btn" id="font-up">🔍 ➕ 크게</button>
+    </div>
+
+    <div id="word-display">
+    </div>
+    
+    <div id="bottom-area">
+        <div style="position: relative;"> 
+            <button id="image-mic-btn">
+                <img src="image_1.png" alt="마이크">
+            </button>
+        </div>
+        <div id="status">준비 완료!</div>
+    </div>
+
+    <script>
+        // 글자 크기와 원고지 격자무늬를 동기화하는 자바스크립트
+        let currentFontSize = 80;
+        const wordDisplay = document.getElementById('word-display');
+        const btnUp = document.getElementById('font-up');
+        const btnDown = document.getElementById('font-down');
+
+        function updateGridAndFont() {
+            const cellSize = currentFontSize + 16; 
+            const cells = wordDisplay.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                cell.style.width = `${cellSize}px`;
+                cell.style.height = `${cellSize}px`;
+                cell.style.fontSize = `${currentFontSize}px`;
+            });
+        }
+
+        btnUp.addEventListener('click', () => {
+            if (currentFontSize < 150) {
+                currentFontSize += 10;
+                updateGridAndFont();
+            }
+        });
+
+        btnDown.addEventListener('click', () => {
+            if (currentFontSize > 30) {
+                currentFontSize -= 10;
+                updateGridAndFont();
+            }
+        });
+
+        updateGridAndFont();
+
+        // ---------------- 음성 인식(STT) 코드 ----------------
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            wordDisplay.innerHTML = "크롬 브라우저를<br>사용해주세요!";
+            document.getElementById('image-mic-btn').style.display = 'none';
+        } else {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'ko-KR'; 
+            recognition.interimResults = true; 
+            recognition.maxAlternatives = 1;
+
+            const micBtn = document.getElementById('image-mic-btn'); // 새로운 이미지 버튼 연결
+            const statusDisplay = document.getElementById('status');
+
+            let isListening = false;
+            let isComplete = false;
+
+            micBtn.addEventListener('click', () => {
+                if (isListening) { recognition.stop(); return; }
+                if (isComplete) { resetApp(); recognition.start(); return; }
+                recognition.start();
+            });
+
+            function resetApp() {
+                isListening = false;
+                isComplete = false;
+                wordDisplay.textContent = "...";
+                statusDisplay.textContent = "귀를 쫑긋 세우고 있어요!";
+            }
+
+            recognition.onstart = function() {
+                isListening = true;
+                micBtn.classList.add('listening'); // 이미지 버튼에 애니메이션 적용
+                statusDisplay.textContent = "듣고 있어요!";
+                wordDisplay.textContent = "...";
+            }
+
+            recognition.onresult = function(event) {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                
+                // 진짜 원고지 칸 생성 로직 유지
+                wordDisplay.innerHTML = '';
+                const text = finalTranscript || interimTranscript;
+                const cellSize = currentFontSize + 16;
+                
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    const cell = document.createElement('span');
+                    cell.classList.add('cell');
+                    if (char === ' ') {
+                        cell.classList.add('space');
+                    }
+                    cell.textContent = char;
+                    cell.style.width = `${cellSize}px`;
+                    cell.style.height = `${cellSize}px`;
+                    cell.style.fontSize = `${currentFontSize}px`;
+                    wordDisplay.appendChild(cell);
+                }
+                
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            };
+
+            recognition.onerror = function(event) {
+                statusDisplay.textContent = "앗, 잘 못 들었어요. 다시 해볼까요?";
+            };
+
+            recognition.onend = function() {
+                isListening = false;
+                micBtn.classList.remove('listening');
+
+                const cells = wordDisplay.querySelectorAll('.cell');
+                if (cells.length > 0 && Array.from(cells).some(cell => cell.textContent.trim() !== "")) {
+                    isComplete = true;
+                    // 💡 추가 수정 사항: 완료 문구를 "완료!"로 수정
+                    statusDisplay.textContent = "완료!"; 
+                } else {
+                    statusDisplay.textContent = "다시 말하기 버튼을 눌러주세요.";
+                }
+            };
+        }
+    </script>
+</body>
+</html>
