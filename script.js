@@ -8,7 +8,7 @@ const btnResetImages = document.getElementById('btnResetImages');
 
 const gameScreen = document.getElementById('gameScreen');
 const imageCanvas = document.getElementById('imageCanvas');
-const imageCtx = imageCanvas.getContext('2d');
+const imageCtx = imageCanvas.getContext('2d', { willReadFrequently: true });
 const eraserCanvas = document.getElementById('eraserCanvas');
 const eraserCtx = eraserCanvas.getContext('2d', { willReadFrequently: true });
 
@@ -41,12 +41,12 @@ let isAnswerRevealed = false;
 let lastX = 0; let lastY = 0;
 let eraserSize = parseInt(eraserSizeInput.value);
 
-// --- 1. 대용량 캔바 연동 데이터베이스 (IndexedDB) 정의 ---
+// --- 1. 대용량 데이터베이스 (IndexedDB) 설정 ---
 const DB_NAME = 'EraserKidsDB';
 const STORE_NAME = 'imageStore';
 
 function initDB() {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, 2);
         request.onupgradeneeded = (e) => {
             const db = e.target.result;
@@ -55,37 +55,52 @@ function initDB() {
             }
         };
         request.onsuccess = (e) => resolve(e.target.result);
+        request.onerror = (e) => reject(e.target.error);
     });
 }
 
 async function saveImages(imagesArray) {
-    const db = await initDB();
-    return new Promise((resolve) => {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        tx.objectStore(STORE_NAME).put(imagesArray, 'current_session');
-        tx.oncomplete = () => resolve();
-    });
+    try {
+        const db = await initDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            tx.objectStore(STORE_NAME).put(imagesArray, 'current_session');
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    } catch (e) {
+        console.warn("DB 저장 차단됨 (시크릿 모드 등). 현재 창에서는 정상 작동합니다.");
+    }
 }
 
 async function loadImages() {
-    const db = await initDB();
-    return new Promise((resolve) => {
-        const tx = db.transaction(STORE_NAME, 'readonly');
-        const req = tx.objectStore(STORE_NAME).get('current_session');
-        req.onsuccess = () => resolve(req.result || []);
-    });
+    try {
+        const db = await initDB();
+        return new Promise((resolve) => {
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const req = tx.objectStore(STORE_NAME).get('current_session');
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => resolve([]);
+        });
+    } catch (e) {
+        return [];
+    }
 }
 
 async function clearImages() {
-    const db = await initDB();
-    return new Promise((resolve) => {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        tx.objectStore(STORE_NAME).delete('current_session');
-        tx.oncomplete = () => resolve();
-    });
+    try {
+        const db = await initDB();
+        return new Promise((resolve) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            tx.objectStore(STORE_NAME).delete('current_session');
+            tx.oncomplete = () => resolve();
+        });
+    } catch (e) {
+        console.warn("DB 삭제 차단됨.");
+    }
 }
 
-// --- 2. 자동 진입 및 고해상도 아이폰 사진 압축 로직 ---
+// --- 2. 자동 진입 및 에러 방지 처리된 이미지 압축 로직 ---
 window.addEventListener('DOMContentLoaded', async () => {
     images = await loadImages();
     if (images && images.length > 0) {
@@ -109,7 +124,7 @@ function compressImage(file) {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                // 가로/세로 최대 해상도를 800px로 제한하여 아이폰 사진 용량을 1/50로 초압축
+                // 가로/세로 최대 해상도를 800px로 제한하여 용량 초압축
                 const MAX_SIZE = 800;
                 let w = img.width; let h = img.height;
                 if (w > h && w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; }
@@ -117,9 +132,18 @@ function compressImage(file) {
 
                 canvas.width = w; canvas.height = h;
                 ctx.drawImage(img, 0, 0, w, h);
-                resolve(canvas.toDataURL('image/jpeg', 0.6)); // 압축률 설정
+                resolve(canvas.toDataURL('image/jpeg', 0.6));
+            };
+            img.onerror = () => {
+                // 이미지가 깨졌거나 읽을 수 없는 포맷일 경우 오류를 무시하고 진행
+                console.error("이미지 로드 실패:", file.name);
+                resolve(null); 
             };
             img.src = e.target.result;
+        };
+        reader.onerror = () => {
+            console.error("파일 읽기 실패");
+            resolve(null);
         };
         reader.readAsDataURL(file);
     });
@@ -129,24 +153,42 @@ imageLoader.addEventListener('change', async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     
-    uploadStatus.innerText = "아이폰 고해상도 사진을 압축 저장 중입니다...";
+    uploadStatus.innerText = "아이폰 사진을 처리하고 있습니다. 잠시만 기다려주세요...";
     images = [];
 
-    // 루프를 돌며 업로드 순서 그대로 차례차례 압축 처리
-    for (let i = 0; i < files.length; i++) {
-        const compressed = await compressImage(files[i]);
-        images.push(compressed);
-    }
+    // 안전장치: 오류가 발생하더라도 멈추지 않고 다음 단계로 무조건 넘어가도록 try-catch 적용
+    try {
+        for (let i = 0; i < files.length; i++) {
+            const compressed = await compressImage(files[i]);
+            if (compressed) {
+                images.push(compressed);
+            }
+        }
 
-    await saveImages(images);
-    uploadStatus.innerText = "준비 완료! 게임 화면으로 넘어갑니다.";
-    
-    // 업로드가 끝나면 버튼 누를 필요 없이 즉시 자동 시작구동!
-    setTimeout(() => {
-        skipSetupAndStart();
-    }, 800);
+        if (images.length === 0) {
+            uploadStatus.innerText = "사진을 처리하지 못했습니다. 다른 사진으로 시도해주세요.";
+            return;
+        }
+
+        await saveImages(images);
+        uploadStatus.innerText = "준비 완료! 게임 화면으로 넘어갑니다.";
+        
+        // 0.5초 뒤 무조건 화면 전환
+        setTimeout(() => {
+            skipSetupAndStart();
+        }, 500);
+
+    } catch (error) {
+        console.error("업로드 중 에러 발생:", error);
+        uploadStatus.innerText = "처리 중 에러가 발생했지만 강제로 진행합니다.";
+        // 에러가 나도 이미지가 메모리에 1장이라도 있다면 강제 실행
+        if (images.length > 0) {
+            setTimeout(() => { skipSetupAndStart(); }, 500);
+        }
+    }
 });
 
+// 백업용 버튼
 btnInitStart.addEventListener('click', skipSetupAndStart);
 
 function skipSetupAndStart() {
@@ -156,9 +198,8 @@ function skipSetupAndStart() {
     createNumberTabs();
     totalPageSpan.innerText = images.length;
     
-    // 자동 배경음 구동 시작
     if(bgmCheck.checked) {
-        bgm.play().catch(() => console.log("자동재생 방지로 클릭 후 재생됨"));
+        bgm.play().catch(() => console.log("사운드 권한 대기 중 (화면을 한 번 클릭하면 소리가 납니다)"));
     }
     setupStage(0);
 }
@@ -211,7 +252,6 @@ function setupStage(index) {
         imageCtx.clearRect(0, 0, cw, ch);
         imageCtx.drawImage(img, dx, dy, w, h);
         
-        // 가림막 (짙은 갈색)
         eraserCtx.globalCompositeOperation = 'source-over';
         eraserCtx.fillStyle = '#463e30'; 
         eraserCtx.fillRect(0, 0, cw, ch);
@@ -219,7 +259,7 @@ function setupStage(index) {
     img.src = images[currentIdx];
 }
 
-// --- 4. 점점이 묻어나오는 지우개 효과 로직 (동영상 스타일) ---
+// --- 4. 점점이 묻어나오는 지우개 효과 로직 ---
 function getMousePos(e) {
     const rect = eraserCanvas.getBoundingClientRect();
     return {
@@ -231,6 +271,11 @@ function getMousePos(e) {
 function startDrawing(e) {
     if(isAnswerRevealed) return;
     isDrawing = true;
+    
+    // 사운드 권한 획득 처리 (최초 클릭 시)
+    if(bgmCheck.checked && bgm.paused) {
+        bgm.play().catch(()=>{});
+    }
     draw(e);
 }
 
@@ -238,7 +283,6 @@ function draw(e) {
     if (!isDrawing || isAnswerRevealed) return;
     const pos = getMousePos(e.touches ? e.touches[0] : e);
 
-    // 완벽한 선 대신, 동영상처럼 작은 구멍이 숭숭 뚫리는 점 패턴 방식 브러시 구현
     eraserCtx.globalCompositeOperation = 'destination-out';
     for (let i = 0; i < 12; i++) {
         const angle = Math.random() * Math.PI * 2;
@@ -252,8 +296,8 @@ function draw(e) {
         eraserCtx.fill();
     }
 
-    if(sfxCheck.checked && sfxErase.paused) {
-        sfxErase.currentTime = 0;
+    if(sfxCheck.checked) {
+        // 소리가 너무 자주 끊기지 않도록 가볍게 재생
         sfxErase.play().catch(()=>{});
     }
 }
