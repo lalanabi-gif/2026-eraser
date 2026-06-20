@@ -10,7 +10,7 @@ html, body {
 
 body { display: flex; justify-content: center; align-items: center; }
 
-/* 설정 화면 (팝업) */
+/* 설정 화면 */
 .setup-area {
     text-align: center; background: white; padding: 40px 60px; 
     border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
@@ -21,7 +21,7 @@ body { display: flex; justify-content: center; align-items: center; }
 .upload-btn { display: inline-block; background: #8b51ff; color: white; padding: 12px 35px; border-radius: 30px; font-size: 20px; cursor: pointer; margin: 15px 0; }
 .setup-btn { padding: 10px 30px; font-size: 18px; font-family: 'Jua'; background: #4caf50; color: white; border: none; cursor: pointer; border-radius: 20px; }
 
-/* 메인 컨테이너 (화면 100%) */
+/* 메인 컨테이너 */
 .app-container { width: 100%; height: 100%; background-color: #f6c445; display: flex; flex-direction: column; }
 
 /* 보라색 상단 헤더 */
@@ -36,33 +36,25 @@ header {
 .icon-btn { background: #c1e3ff; border: 2px solid #333; border-radius: 15px; padding: 3px 10px; cursor: pointer; }
 .header-checks { display: flex; gap: 5px; color: white; margin-left: 5px; }
 
-/* 메인 콘텐츠 영역 */
+/* 메인 콘텐츠 영역 (글자 배너가 사라져 상단 여백을 넓혀 최적의 밸런스 유지) */
 .main-content {
     flex: 1; display: flex; flex-direction: column; align-items: center; 
-    padding: 15px 80px 10px 40px; /* 우측 슬라이더를 위한 여백 설정 */
+    padding: 30px 80px 15px 40px; 
     box-sizing: border-box; overflow: hidden;
 }
-
-/* 질문 배너 */
-.question-banner { 
-    background: #fdf5e6; width: 60%; max-width: 500px; text-align: center; 
-    padding: 8px; border-top: 4px solid white; border-bottom: 2px solid #333; 
-    margin-bottom: 15px; flex-shrink: 0; border-radius: 10px;
-}
-.question-banner h2 { margin: 0; font-size: 22px; color: #333; }
 
 .screen-content { 
     width: 100%; height: 100%; 
     display: flex; flex-direction: column; align-items: center; 
 }
 
-/* 플레이 영역 (화면에 꽉 차게) */
+/* 플레이 영역 (상단 배너가 삭제되어 화면 대부분을 거대하게 채움) */
 .play-area { 
     position: relative; width: 100%; flex: 1; 
     display: flex; justify-content: center; align-items: center; min-height: 0; 
 }
 
-/* 캔버스 (참고 이미지처럼 거대하게) */
+/* 캔버스 래퍼 */
 .canvas-wrapper { 
     width: 100%; height: 100%; 
     background-color: white; border: 4px solid #463e30; border-radius: 5px;
@@ -70,19 +62,19 @@ header {
 }
 #imageCanvas, #eraserCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none; }
 #eraserCanvas { z-index: 2; cursor: pointer; }
-.image-label { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,0.95); padding: 5px 30px; font-size: 28px; color: #333; z-index: 3; border: 2px solid #333; border-radius: 10px; }
+.image-label { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,0.95); padding: 5px 30px; font-size: 28px; color: #333; z-index: 3; border: 2px solid #333; border-radius: 10px; }
 
-/* 세로 슬라이더 바 (캔버스 우측에 부착) */
+/* 세로 슬라이더 바 */
 .eraser-slider-container { 
     position: absolute; right: -75px; top: 50%; transform: translateY(-50%);
     display: flex; flex-direction: column; align-items: center; 
     background: #fdf5e6; padding: 15px 10px; border-radius: 10px; border: 2px solid #333; 
-    height: 60%; max-height: 250px; z-index: 10;
+    height: 70%; max-height: 280px; z-index: 10;
 }
 .eraser-slider-container label { font-size: 14px; text-align: center; margin-bottom: 10px; color: #333; line-height: 1.2; font-weight: bold; }
 #eraserSize { -webkit-appearance: slider-vertical; writing-mode: bt-lr; width: 12px; height: 100%; cursor: pointer; }
 
-/* 화살표 (캔버스 좌우 가장자리) */
+/* 화살표 버튼 */
 .nav-arrow { 
     position: absolute; top: 50%; transform: translateY(-50%);
     background: rgba(0,0,0,0.7); border: 2px solid white; color: white;
@@ -91,9 +83,13 @@ header {
 }
 .left-arrow { left: -20px; }
 .right-arrow { right: -20px; }
-.nav-arrow:hover { background: rgba(0,0,0,0.9); transform: translateY(-50%) scale(1.1); }
 
-/* 하단 버튼 및 숫자 (캔버스 바로 아래 한 줄 배치) */
+/* 도트 배경 무늬 */
+.bg-dot { position: absolute; top: 20%; width: 150px; height: 300px; background-image: radial-gradient(#d4a331 20%, transparent 20%); background-size: 10px 10px; opacity: 0.5; pointer-events: none; }
+.bg-dot.left { left: -30px; border-radius: 0 100px 100px 0; }
+.bg-dot.right { right: -30px; border-radius: 100px 0 0 100px; top: 60%; }
+
+/* 하단 밀착 컨트롤 바 */
 .bottom-controls { 
     display: flex; justify-content: center; align-items: center; 
     gap: 15px; margin-top: 15px; flex-shrink: 0; 
@@ -107,7 +103,7 @@ header {
 .action-buttons { display: flex; gap: 10px; }
 .end-btn { background: #463e30; color: white; border: 2px solid #333; padding: 8px 20px; font-size: 18px; font-family: 'Jua', sans-serif; border-radius: 8px; cursor: pointer; }
 
-/* 사진 선택 1, 2, 3 */
+/* 사진 선택 탭 */
 .number-label { font-size: 20px; color: white; font-weight: bold; margin-left: 10px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
 .number-selectors { display: flex; gap: 8px; }
 .num-circle { 
