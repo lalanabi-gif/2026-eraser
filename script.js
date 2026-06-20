@@ -16,12 +16,13 @@ const actionButtons = document.getElementById('actionButtons');
 const imageLabel = document.getElementById('imageLabel');
 const btnPrev = document.getElementById('btnPrev');
 const btnNext = document.getElementById('btnNext');
-
-const eraserSizeInput = document.getElementById('eraserSize');
 const numberSelectors = document.getElementById('numberSelectors');
+const eraserSizeInput = document.getElementById('eraserSize');
 const btnRetry = document.getElementById('btnRetry');
 const btnMoreGames = document.getElementById('btnMoreGames');
 
+const bgm = document.getElementById('bgm');
+const sfxSuccess = document.getElementById('sfxSuccess');
 const bgmCheck = document.getElementById('bgmCheck');
 const sfxCheck = document.getElementById('sfxCheck');
 
@@ -31,69 +32,6 @@ let isDrawing = false;
 let isAnswerRevealed = false;
 let eraserSize = parseInt(eraserSizeInput.value);
 
-// --- [고성능 내장 웹 오디오 엔진 선언] 외부 차단이나 브라우저 제한을 완벽하게 우회 ---
-let audioCtx = null;
-let bgmTimer = null;
-
-function initAudioEngine() {
-    if (audioCtx) return;
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    startBuiltInBgm();
-}
-
-// 아이들에게 어울리는 밝고 따뜻한 펜타토닉 멜로디 실시간 합성기 (BGM)
-function startBuiltInBgm() {
-    if (bgmTimer) return;
-    const melody = [261.63, 293.66, 329.63, 392.00, 440.00, 392.00, 329.63, 293.66]; // 도레미솔라 오르골풍
-    let step = 0;
-
-    bgmTimer = setInterval(() => {
-        if (!bgmCheck.checked || !audioCtx || audioCtx.state === 'suspended') return;
-        
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        
-        osc.type = 'triangle'; // 부드럽고 동글동글한 음색
-        osc.frequency.setValueAtTime(melody[step % melody.length], audioCtx.currentTime);
-        
-        gain.gain.setValueAtTime(0.04, audioCtx.currentTime); // 적절한 배경음 볼륨
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-        
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.5);
-        
-        step++;
-    }, 450); // 박자 설정
-}
-
-// 정답을 누른 즉시 재생되는 맑은 딩동댕~ 실로폰 효과음 합성기
-function playInstantSuccessSound() {
-    if (!sfxCheck.checked || !audioCtx) return;
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-
-    const now = audioCtx.currentTime;
-    const chord = [523.25, 659.25, 783.99, 1046.50]; // 도-미-솔-도 화음
-    
-    chord.forEach((freq, i) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        
-        osc.type = 'sine'; // 맑은 종소리 음색
-        osc.frequency.setValueAtTime(freq, now + (i * 0.08)); // 미세한 시차를 두어 딩동댕 구현
-        
-        gain.gain.setValueAtTime(0.12, now + (i * 0.08));
-        gain.gain.exponentialRampToValueAtTime(0.001, now + (i * 0.08) + 0.4);
-        
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(now + (i * 0.08));
-        osc.stop(now + (i * 0.08) + 0.4);
-    });
-}
-
-// 데이터베이스 설정
 const DB_NAME = 'EraserKidsDB';
 const STORE_NAME = 'imageStore';
 
@@ -112,13 +50,12 @@ function initDB() {
 async function saveImages(imagesArray) {
     try {
         const db = await initDB();
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             const tx = db.transaction(STORE_NAME, 'readwrite');
             tx.objectStore(STORE_NAME).put(imagesArray, 'current_session');
             tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
         });
-    } catch (e) { console.warn("DB 저장 실패"); }
+    } catch (e) { console.warn("DB 저장 차단됨"); }
 }
 
 async function loadImages() {
@@ -141,14 +78,18 @@ async function clearImages() {
             tx.objectStore(STORE_NAME).delete('current_session');
             tx.oncomplete = () => resolve();
         });
-    } catch (e) { console.warn("DB 삭제 실패"); }
+    } catch (e) { console.warn("DB 삭제 차단됨"); }
 }
 
-// 브라우저 오디오 권한 우회 및 활성화 트리거
-function triggerAudioOnInteraction() {
-    initAudioEngine();
-    if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
+// 사운드 재생 헬퍼 함수
+function playBgmSafely() {
+    if(bgmCheck.checked && bgm.paused) {
+        bgm.play().catch(() => {
+            // 브라우저가 막으면 사용자 클릭 시 대기했다가 재생
+            document.body.addEventListener('click', () => {
+                if(bgmCheck.checked && bgm.paused) bgm.play();
+            }, { once: true });
+        });
     }
 }
 
@@ -220,6 +161,7 @@ function skipSetupAndStart() {
     setupArea.style.display = 'none';
     appContainer.style.display = 'flex';
     createNumberTabs();
+    playBgmSafely();
     setupStage(0);
 }
 
@@ -229,19 +171,15 @@ function createNumberTabs() {
         const btn = document.createElement('div');
         btn.className = 'num-circle';
         btn.innerText = i + 1;
-        btn.onclick = () => { triggerAudioOnInteraction(); setupStage(i); };
+        btn.onclick = () => setupStage(i);
         numberSelectors.appendChild(btn);
     }
 }
 
-bgmCheck.addEventListener('change', (e) => {
-    if (!audioCtx) initAudioEngine();
-    e.target.checked ? audioCtx.resume() : audioCtx.suspend();
-});
-
-btnPrev.addEventListener('click', () => { triggerAudioOnInteraction(); if(currentIdx > 0) setupStage(currentIdx - 1); });
-btnNext.addEventListener('click', () => { triggerAudioOnInteraction(); if(currentIdx < images.length - 1) setupStage(currentIdx + 1); });
-btnRetry.addEventListener('click', () => { triggerAudioOnInteraction(); setupStage(currentIdx); });
+bgmCheck.addEventListener('change', (e) => { e.target.checked ? playBgmSafely() : bgm.pause(); });
+btnPrev.addEventListener('click', () => { if(currentIdx > 0) setupStage(currentIdx - 1); });
+btnNext.addEventListener('click', () => { if(currentIdx < images.length - 1) setupStage(currentIdx + 1); });
+btnRetry.addEventListener('click', () => setupStage(currentIdx));
 btnMoreGames.addEventListener('click', () => alert('첫 화면으로 돌아갑니다.'));
 btnCheckAnswer.addEventListener('click', revealAnswer);
 eraserSizeInput.addEventListener('input', (e) => { eraserSize = parseInt(e.target.value); });
@@ -275,6 +213,7 @@ function setupStage(index) {
 
     const img = new Image();
     img.onload = () => {
+        // 이미지 비율 유지 크기 계산
         const scale = Math.min(cw / img.width, ch / img.height);
         const w = img.width * scale; const h = img.height * scale;
         const dx = (cw - w) / 2; const dy = (ch - h) / 2;
@@ -283,8 +222,10 @@ function setupStage(index) {
         imageCtx.drawImage(img, dx, dy, w, h);
         
         eraserCtx.globalCompositeOperation = 'source-over';
+        // 핵심 수정: 캔버스 전체가 아니라, '사진이 그려진 영역'에만 정확히 가림막을 씌웁니다!
+        eraserCtx.clearRect(0, 0, cw, ch);
         eraserCtx.fillStyle = '#463e30'; 
-        eraserCtx.fillRect(0, 0, cw, ch);
+        eraserCtx.fillRect(dx, dy, w, h);
     };
     img.src = images[currentIdx];
 }
@@ -300,7 +241,7 @@ function getMousePos(e) {
 function startDrawing(e) {
     if(isAnswerRevealed) return;
     isDrawing = true;
-    triggerAudioOnInteraction();
+    playBgmSafely(); // 클릭 시 오디오 차단 해제 유도
     draw(e);
 }
 
@@ -334,14 +275,16 @@ window.addEventListener('touchend', stopDrawing);
 
 function revealAnswer() {
     isAnswerRevealed = true;
-    triggerAudioOnInteraction();
-    
     btnCheckAnswer.style.display = 'none';
     actionButtons.style.display = 'flex';
     imageLabel.style.display = 'block';
     
+    // 남은 가림막 지우기
     eraserCtx.clearRect(0, 0, eraserCanvas.width, eraserCanvas.height);
     
-    // 정답 확인 누른 즉시 완벽한  타이밍에 사운드 연출 실행
-    playInstantSuccessSound();
+    // 정답 확인 시 설정이 켜져있다면 딩동댕 소리 재생!
+    if(sfxCheck.checked) {
+        sfxSuccess.currentTime = 0;
+        sfxSuccess.play().catch(()=>{});
+    }
 }
