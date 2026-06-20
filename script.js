@@ -24,22 +24,17 @@ const numberSelectors = document.getElementById('numberSelectors');
 const btnRetry = document.getElementById('btnRetry');
 const btnMoreGames = document.getElementById('btnMoreGames');
 
-// 오디오 객체 설정
+// 오디오 객체 설정 (지우개 효과음 제거)
 const bgm = document.getElementById('bgm');
-const sfxErase = document.getElementById('sfxErase');
 const sfxSuccess = document.getElementById('sfxSuccess');
 const bgmCheck = document.getElementById('bgmCheck');
 const sfxCheck = document.getElementById('sfxCheck');
-
-// 크롬, 사파리의 오디오 자동재생 정책 해결을 위한 상호작용 변수
-let audioUnlocked = false; 
 
 let images = []; 
 let currentIdx = 0;
 let isDrawing = false;
 let isAnswerRevealed = false;
 let eraserSize = parseInt(eraserSizeInput.value);
-let lastSfxTime = 0; // 지우개 효과음 겹침 방지용
 
 // 데이터베이스 관련
 const DB_NAME = 'EraserKidsDB';
@@ -94,13 +89,17 @@ async function clearImages() {
     } catch (e) { console.warn("DB 삭제 실패"); }
 }
 
-// 오디오 잠금 해제 (사용자가 화면을 클릭하는 순간 정책이 풀립니다)
-document.body.addEventListener('click', () => {
-    if (!audioUnlocked && bgmCheck.checked && appContainer.style.display === 'flex') {
-        bgm.play().catch(e => console.log("오디오 재생 오류:", e));
-        audioUnlocked = true;
+// 배경음악 강제 재생 로직 (브라우저 정책 우회)
+function playBgmSafely() {
+    if(bgmCheck.checked && bgm.paused) {
+        bgm.play().catch(() => {
+            // 브라우저가 자동 재생을 막은 경우, 사용자가 화면을 클릭하면 재생되도록 예약
+            document.body.addEventListener('click', () => {
+                if(bgmCheck.checked && bgm.paused) bgm.play();
+            }, { once: true });
+        });
     }
-}, { once: true });
+}
 
 // 초기 로딩
 window.addEventListener('DOMContentLoaded', async () => {
@@ -147,7 +146,7 @@ imageLoader.addEventListener('change', async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     
-    uploadStatus.innerText = "아이폰 사진을 처리하고 있습니다. 잠시만 기다려주세요...";
+    uploadStatus.innerText = "사진을 처리하고 있습니다. 잠시만 기다려주세요...";
     images = [];
 
     try {
@@ -177,6 +176,9 @@ function skipSetupAndStart() {
     appContainer.style.display = 'flex';
     createNumberTabs();
     totalPageSpan.innerText = images.length;
+    
+    // 게임 시작 시 배경음악 재생 시도
+    playBgmSafely();
     setupStage(0);
 }
 
@@ -191,7 +193,7 @@ function createNumberTabs() {
     }
 }
 
-bgmCheck.addEventListener('change', (e) => { e.target.checked ? bgm.play() : bgm.pause(); });
+bgmCheck.addEventListener('change', (e) => { e.target.checked ? playBgmSafely() : bgm.pause(); });
 btnPrev.addEventListener('click', () => { if(currentIdx > 0) setupStage(currentIdx - 1); });
 btnNext.addEventListener('click', () => { if(currentIdx < images.length - 1) setupStage(currentIdx + 1); });
 btnRetry.addEventListener('click', () => setupStage(currentIdx));
@@ -247,11 +249,8 @@ function startDrawing(e) {
     if(isAnswerRevealed) return;
     isDrawing = true;
     
-    // 첫 클릭 시 오디오 잠금 해제 지원
-    if (!audioUnlocked && bgmCheck.checked) {
-        bgm.play().catch(()=>{});
-        audioUnlocked = true;
-    }
+    // 사용자가 지우개를 누르면 배경음악 재생 재시도
+    playBgmSafely();
     draw(e);
 }
 
@@ -271,14 +270,7 @@ function draw(e) {
         eraserCtx.arc(dotX, dotY, dotSize, 0, Math.PI * 2);
         eraserCtx.fill();
     }
-
-    // 소리가 너무 겹쳐서 깨지지 않도록 (300ms 간격으로 재생)
-    const now = Date.now();
-    if(sfxCheck.checked && (now - lastSfxTime > 300)) {
-        sfxErase.currentTime = 0;
-        sfxErase.play().catch(()=>{});
-        lastSfxTime = now;
-    }
+    // 지우개 효과음 코드가 삭제되었습니다.
 }
 
 function stopDrawing() { isDrawing = false; }
@@ -299,10 +291,9 @@ function revealAnswer() {
     
     eraserCtx.clearRect(0, 0, eraserCanvas.width, eraserCanvas.height);
     
+    // 정답 확인 시 효과음 재생
     if(sfxCheck.checked) {
         sfxSuccess.currentTime = 0;
         sfxSuccess.play().catch(()=>{});
     }
-    
-    // 팝업 띄우는 로직은 완전히 제거되었습니다!
 }
