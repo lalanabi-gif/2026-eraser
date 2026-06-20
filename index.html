@@ -18,20 +18,27 @@
 
         <main>
             <div class="game-area">
-                <div class="canvas-container">
+                <div class="canvas-wrapper" id="canvasWrapper">
                     <canvas id="imageCanvas"></canvas>
                     <canvas id="eraserCanvas"></canvas>
                 </div>
+                
                 <div class="eraser-size-control">
                     <label for="eraserSize">지우개<br>크기</label>
                     <input type="range" id="eraserSize" min="10" max="150" value="50" orient="vertical">
                 </div>
             </div>
+
+            <div class="action-buttons">
+                <button id="btnMoreGames" class="action-btn outline">게임 더 보기</button>
+                <button id="btnRetry" class="action-btn fill">다시 하기</button>
+            </div>
         </main>
 
         <footer>
-            <div id="image-selector" class="image-selector">
-                </div>
+            <div id="imageSelector" class="image-selector">
+                <p class="empty-msg">오른쪽 위 '이미지 업로드'를 눌러 사진을 추가해 주세요!</p>
+            </div>
         </footer>
     </div>
     <script src="script.js"></script>
