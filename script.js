@@ -58,11 +58,45 @@ btnResetImages.addEventListener('click', () => {
     }
 });
 
-// 순서를 보장하여 파일을 읽는 비동기 함수
-async function readFileAsDataURL(file) {
+// 고해상도 사진의 용량을 획기적으로 줄여주는 압축 함수 (추가된 핵심 로직)
+async function compressAndResizeImage(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // 최대 해상도 제한 (게임 화면이 640px 이므로 1280px이면 아주 충분합니다)
+                const MAX_WIDTH = 1280;
+                const MAX_HEIGHT = 1280;
+                let width = img.width;
+                let height = img.height;
+
+                // 비율을 유지하면서 크기 줄이기
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // 용량을 크게 줄이기 위해 JPEG 포맷, 화질 80%로 압축하여 반환
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                resolve(compressedDataUrl);
+            };
+            img.src = e.target.result;
+        };
         reader.readAsDataURL(file);
     });
 }
@@ -71,21 +105,22 @@ imageLoader.addEventListener('change', async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     
-    uploadStatus.innerText = "사진을 처리하는 중입니다... 잠시만 기다려주세요!";
-    images = []; // 초기화
+    uploadStatus.innerText = "고해상도 사진을 압축하고 있습니다... 잠시만 기다려주세요!";
+    images = []; 
 
-    // 파일 크기가 너무 크면 에러가 날 수 있으므로, 캔버스를 이용해 리사이징/압축하여 저장
+    // 모든 파일을 하나씩 압축하여 배열에 담기
     for (let i = 0; i < files.length; i++) {
-        const dataUrl = await readFileAsDataURL(files[i]);
-        images.push(dataUrl);
+        const compressedImage = await compressAndResizeImage(files[i]);
+        images.push(compressedImage);
     }
 
     try {
         localStorage.setItem('eraserGameImages', JSON.stringify(images));
-        uploadStatus.innerText = "완료되었습니다!";
+        uploadStatus.innerText = "압축 및 저장이 완료되었습니다!";
         btnInitStart.style.display = 'inline-block';
-    } catch (e) {
-        alert("사진 용량이 너무 큽니다. 사진 갯수를 줄이거나 해상도를 낮춰주세요.");
+    } catch (err) {
+        alert("알 수 없는 오류로 저장에 실패했습니다. 사진을 조금 줄여서 다시 시도해주세요.");
+        console.error(err);
         localStorage.removeItem('eraserGameImages');
     }
 });
@@ -140,11 +175,9 @@ function setupStage(index) {
     btnPrev.style.visibility = (currentIdx === 0) ? 'hidden' : 'visible';
     btnNext.style.visibility = (currentIdx === images.length - 1) ? 'hidden' : 'visible';
 
-    // 활성 번호 탭 디자인 변경
     document.querySelectorAll('.num-circle').forEach((tab, i) => tab.classList.toggle('active', i === currentIdx));
 
-    // 캔버스 세팅
-    const cw = 640; const ch = 420; // CSS의 크기와 동일하게 고정
+    const cw = 640; const ch = 420; 
     imageCanvas.width = cw; imageCanvas.height = ch;
     eraserCanvas.width = cw; eraserCanvas.height = ch;
 
@@ -159,7 +192,6 @@ function setupStage(index) {
         imageCtx.clearRect(0, 0, cw, ch);
         imageCtx.drawImage(img, dx, dy, w, h);
         
-        // 가림막 (짙은 갈색)
         eraserCtx.globalCompositeOperation = 'source-over';
         eraserCtx.fillStyle = '#463e30'; 
         eraserCtx.fillRect(0, 0, cw, ch);
@@ -167,8 +199,7 @@ function setupStage(index) {
     img.src = images[currentIdx];
 }
 
-// --- 3. 부드러운 지우개 그리기 (핵심) ---
-// 실제 CSS에 렌더링된 크기와 캔버스 해상도를 정확히 일치시켜 오차 제거
+// --- 3. 부드러운 지우개 그리기 ---
 function getMousePos(e) {
     const rect = eraserCanvas.getBoundingClientRect();
     return {
@@ -191,7 +222,6 @@ function draw(e) {
     eraseLine(lastX, lastY, pos.x, pos.y);
     lastX = pos.x; lastY = pos.y;
     
-    // 지울 때 효과음 재생
     if(sfxCheck.checked && sfxErase.paused) {
         sfxErase.currentTime = 0;
         sfxErase.play().catch(()=>{});
@@ -205,19 +235,18 @@ function stopDrawing() {
 function eraseLine(x1, y1, x2, y2) {
     eraserCtx.globalCompositeOperation = 'destination-out';
     eraserCtx.lineWidth = eraserSize;
-    eraserCtx.lineCap = 'round'; // 끝을 둥글게 처리하여 매끄럽게 만듦
-    eraserCtx.lineJoin = 'round'; // 꺾이는 부분도 둥글게
+    eraserCtx.lineCap = 'round';
+    eraserCtx.lineJoin = 'round';
     eraserCtx.beginPath();
     eraserCtx.moveTo(x1, y1);
     eraserCtx.lineTo(x2, y2);
     eraserCtx.stroke();
 }
 
-// 마우스, 터치 이벤트 등록
 eraserCanvas.addEventListener('mousedown', startDrawing);
 eraserCanvas.addEventListener('mousemove', draw);
 window.addEventListener('mouseup', stopDrawing);
-eraserCanvas.addEventListener('mouseleave', stopDrawing); // 화면 밖으로 나갔을 때 끊김 방지
+eraserCanvas.addEventListener('mouseleave', stopDrawing);
 eraserCanvas.addEventListener('touchstart', startDrawing, {passive: false});
 eraserCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); }, {passive: false});
 window.addEventListener('touchend', stopDrawing);
@@ -229,7 +258,6 @@ function revealAnswer() {
     actionButtons.style.display = 'flex';
     imageLabel.style.display = 'block';
     
-    // 가림막 지우기
     eraserCtx.clearRect(0, 0, eraserCanvas.width, eraserCanvas.height);
     
     if(sfxCheck.checked) {
