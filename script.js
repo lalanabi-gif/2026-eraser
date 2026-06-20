@@ -1,4 +1,3 @@
-// DOM 요소
 const screens = {
     upload: document.getElementById('uploadScreen'),
     start: document.getElementById('startScreen'),
@@ -10,43 +9,39 @@ const uploadStatus = document.getElementById('uploadStatus');
 const btnGoToStart = document.getElementById('btnGoToStart');
 const btnStartGame = document.getElementById('btnStartGame');
 
+const canvasWrapper = document.getElementById('canvasWrapper');
 const imageCanvas = document.getElementById('imageCanvas');
-const imageCtx = imageCanvas.getContext('2d');
+const imageCtx = imageCanvas.getContext('2d', { willReadFrequently: true });
 const eraserCanvas = document.getElementById('eraserCanvas');
-const eraserCtx = eraserCanvas.getContext('2d');
+const eraserCtx = eraserCanvas.getContext('2d', { willReadFrequently: true });
 
 const btnCheckAnswer = document.getElementById('btnCheckAnswer');
-const btnPrev = document.getElementById('btnPrev');
-const btnNext = document.getElementById('btnNext');
 const imageLabel = document.getElementById('imageLabel');
 const headerRight = document.getElementById('headerRight');
 const currentPageSpan = document.getElementById('currentPage');
 const totalPageSpan = document.getElementById('totalPage');
 
-const finalButtons = document.getElementById('finalButtons');
-const completionPopup = document.getElementById('completionPopup');
+const numberSelectors = document.getElementById('numberSelectors');
 const btnRetry = document.getElementById('btnRetry');
 const btnMoreGames = document.getElementById('btnMoreGames');
+const completionPopup = document.getElementById('completionPopup');
 
-// 상태 변수
 let images = [];
 let currentIdx = 0;
 let isDrawing = false;
 let isAnswerRevealed = false;
 let lastX = 0; let lastY = 0;
-const eraserSize = 60; // 지우개 굵기 고정
+const eraserSize = 70; // 큼직한 지우개 크기
 
-// 1. 이벤트 리스너 등록
+// 1. 이벤트 등록
 imageLoader.addEventListener('change', handleUpload);
 btnGoToStart.addEventListener('click', () => changeScreen('start'));
 btnStartGame.addEventListener('click', startGame);
 btnCheckAnswer.addEventListener('click', revealAnswer);
-btnNext.addEventListener('click', () => navigate(1));
-btnPrev.addEventListener('click', () => navigate(-1));
-btnRetry.addEventListener('click', resetGame);
-btnMoreGames.addEventListener('click', () => alert('메인 화면으로 이동합니다!'));
+btnRetry.addEventListener('click', () => setupStage(currentIdx)); // 현재 스테이지 다시하기
+btnMoreGames.addEventListener('click', () => alert('다른 게임도 준비 중이에요!'));
 
-// 지우개 이벤트
+// 지우개 터치 및 마우스 이벤트
 eraserCanvas.addEventListener('mousedown', startDrawing);
 eraserCanvas.addEventListener('mousemove', draw);
 window.addEventListener('mouseup', stopDrawing);
@@ -54,7 +49,14 @@ eraserCanvas.addEventListener('touchstart', (e) => startDrawing(e.touches[0]));
 eraserCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); }, {passive: false});
 window.addEventListener('touchend', stopDrawing);
 
-// 2. 함수 구현
+// 화면 크기가 변할 때 캔버스 크기 재조정
+window.addEventListener('resize', () => {
+    if(screens.game.style.display === 'flex' && images.length > 0) {
+        setupStage(currentIdx);
+    }
+});
+
+// 2. 함수
 function changeScreen(screenName) {
     screens.upload.style.display = 'none';
     screens.start.style.display = 'none';
@@ -68,6 +70,7 @@ function handleUpload(e) {
 
     images = [];
     let loaded = 0;
+    numberSelectors.innerHTML = ''; // 기존 숫자 버튼 초기화
 
     for (let i = 0; i < files.length; i++) {
         const reader = new FileReader();
@@ -76,9 +79,17 @@ function handleUpload(e) {
             img.onload = () => {
                 images.push(img);
                 loaded++;
+                
+                // 숫자 버튼 생성
+                const btn = document.createElement('button');
+                btn.className = 'num-btn';
+                btn.innerText = i + 1;
+                btn.onclick = () => setupStage(i);
+                numberSelectors.appendChild(btn);
+
                 if (loaded === files.length) {
-                    uploadStatus.innerText = `${files.length}장의 사진이 준비되었습니다!`;
-                    btnGoToStart.style.display = 'inline-block';
+                    uploadStatus.innerText = `우와! ${files.length}장의 사진이 준비됐어요!`;
+                    btnGoToStart.style.display = 'block';
                     totalPageSpan.innerText = files.length;
                 }
             };
@@ -91,45 +102,50 @@ function handleUpload(e) {
 function startGame() {
     changeScreen('game');
     headerRight.style.display = 'flex';
-    currentIdx = 0;
-    setupStage();
+    setupStage(0);
 }
 
-function setupStage() {
+function setupStage(index) {
+    currentIdx = index;
     isAnswerRevealed = false;
     const img = images[currentIdx];
-    currentPageSpan.innerText = currentIdx + 1;
-    imageLabel.innerText = `사진${currentIdx + 1}`;
-    imageLabel.style.display = 'none';
     
-    // UI 초기화
+    // UI 업데이트
+    currentPageSpan.innerText = currentIdx + 1;
+    imageLabel.innerText = `사진 ${currentIdx + 1}`;
+    imageLabel.style.display = 'none';
     btnCheckAnswer.style.display = 'inline-block';
-    finalButtons.style.display = 'none';
-    btnPrev.style.display = (currentIdx > 0 && isAnswerRevealed) ? 'block' : 'none';
-    btnNext.style.display = 'none';
+    
+    // 하단 숫자 버튼 활성화 상태 업데이트
+    const numBtns = document.querySelectorAll('.num-btn');
+    numBtns.forEach((btn, i) => {
+        btn.classList.toggle('active', i === currentIdx);
+    });
 
-    // 캔버스 크기 고정 (CSS에 맞춤)
-    const cw = 600; const ch = 400;
-    imageCanvas.width = cw; imageCanvas.height = ch;
-    eraserCanvas.width = cw; eraserCanvas.height = ch;
+    // 캔버스 크기를 래퍼(화면)에 꽉 차게 동적 계산
+    const wrapperW = canvasWrapper.clientWidth;
+    const wrapperH = canvasWrapper.clientHeight;
+    
+    imageCanvas.width = wrapperW; imageCanvas.height = wrapperH;
+    eraserCanvas.width = wrapperW; eraserCanvas.height = wrapperH;
 
-    // 원본 사진 그리기 (비율 유지하여 가운데 정렬)
-    const scale = Math.min(cw / img.width, ch / img.height);
+    // 사진을 캔버스 비율에 맞게 최대한 크게 그리기 (비율 유지)
+    const scale = Math.min(wrapperW / img.width, wrapperH / img.height);
     const w = img.width * scale;
     const h = img.height * scale;
-    const dx = (cw - w) / 2;
-    const dy = (ch - h) / 2;
+    const dx = (wrapperW - w) / 2;
+    const dy = (wrapperH - h) / 2;
     
-    imageCtx.clearRect(0, 0, cw, ch);
+    imageCtx.clearRect(0, 0, wrapperW, wrapperH);
     imageCtx.drawImage(img, dx, dy, w, h);
 
-    // 덮개(카키색) 덮기
+    // 가림막(카키/다크브라운 톤) 덮기
     eraserCtx.globalCompositeOperation = 'source-over';
-    eraserCtx.fillStyle = '#4A4535'; 
-    eraserCtx.fillRect(0, 0, cw, ch);
+    eraserCtx.fillStyle = '#6D4C41'; 
+    eraserCtx.fillRect(0, 0, wrapperW, wrapperH);
 }
 
-// 지우개 로직
+// 마우스/터치 좌표를 캔버스 내부 좌표로 변환
 function getMousePos(e) {
     const rect = eraserCanvas.getBoundingClientRect();
     const scaleX = eraserCanvas.width / rect.width;
@@ -168,44 +184,30 @@ function eraseLine(x1, y1, x2, y2) {
     eraserCtx.stroke();
 }
 
-// 정답 확인 버튼 클릭 시
 function revealAnswer() {
     isAnswerRevealed = true;
-    
-    // 덮개 캔버스 완전히 지우기
-    eraserCtx.clearRect(0, 0, eraserCanvas.width, eraserCanvas.height);
-    
-    // 사진 이름 라벨 띄우기
-    imageLabel.style.display = 'block';
-    
-    // 하단 버튼 변경 및 네비게이션 화살표 처리
     btnCheckAnswer.style.display = 'none';
-
-    if (currentIdx < images.length - 1) {
-        // 다음 사진이 남은 경우
-        btnNext.style.display = 'block';
-        if(currentIdx > 0) btnPrev.style.display = 'block';
-    } else {
-        // 마지막 사진인 경우 완료 팝업 표출
-        showCompletion();
-    }
-}
-
-function navigate(direction) {
-    currentIdx += direction;
-    setupStage();
-}
-
-function showCompletion() {
-    completionPopup.style.display = 'flex';
-    setTimeout(() => {
-        completionPopup.style.display = 'none';
-        finalButtons.style.display = 'block';
-        btnPrev.style.display = 'block'; // 이전 사진은 볼 수 있게
-    }, 2000); // 2초 뒤 팝업 사라지고 종료 버튼 보임
-}
-
-function resetGame() {
-    currentIdx = 0;
-    setupStage();
+    imageLabel.style.display = 'block'; // 사진 이름 짠! 나타나기
+    
+    // 가림막 지우기 (애니메이션 효과)
+    let opacity = 1;
+    const fadeOut = setInterval(() => {
+        opacity -= 0.1;
+        if(opacity <= 0) {
+            clearInterval(fadeOut);
+            eraserCtx.clearRect(0, 0, eraserCanvas.width, eraserCanvas.height);
+            
+            // 마지막 문제일 경우 팝업 띄우기
+            if (currentIdx === images.length - 1) {
+                setTimeout(() => {
+                    completionPopup.style.display = 'flex';
+                    setTimeout(() => completionPopup.style.display = 'none', 3000); // 3초 뒤 팝업 닫힘
+                }, 500);
+            }
+        } else {
+            eraserCtx.globalCompositeOperation = 'destination-out';
+            eraserCtx.fillStyle = `rgba(255,255,255,0.1)`;
+            eraserCtx.fillRect(0,0,eraserCanvas.width, eraserCanvas.height);
+        }
+    }, 30);
 }

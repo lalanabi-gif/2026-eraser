@@ -9,66 +9,51 @@
 <body>
     <div class="app-container">
         <header>
-            <div class="header-left"></div>
-            <h1>상세보기</h1>
+            <h1>싹싹 지우개 퀴즈</h1>
             <div class="header-right" id="headerRight" style="display: none;">
                 <div class="page-indicator"><span id="currentPage">1</span> / <span id="totalPage">3</span></div>
-                <button class="icon-btn eraser-icon">🧽</button>
-                <button class="icon-btn sound-icon">🔊</button>
+                <button class="icon-btn">🧽</button>
+                <button class="icon-btn">🔊</button>
             </div>
         </header>
 
-        <main id="uploadScreen">
+        <main id="uploadScreen" class="screen">
             <div class="upload-box">
-                <h2>문제를 만들 사진을 올려주세요</h2>
+                <div class="character-icon">🎨</div>
+                <h2>어떤 사진으로 문제를 내볼까요?</h2>
+                <p>친구들이 맞힐 재미있는 사진을 골라주세요!</p>
                 <input type="file" id="imageLoader" accept="image/*" multiple>
-                <label for="imageLoader" class="upload-btn">+ 사진 추가하기</label>
+                <label for="imageLoader" class="upload-btn">사진 고르기</label>
                 <p id="uploadStatus"></p>
-                <button id="btnGoToStart" class="action-btn" style="display: none;">완료</button>
+                <button id="btnGoToStart" class="action-btn next-btn" style="display: none;">다 골랐어요! ▶</button>
             </div>
         </main>
 
-        <main id="startScreen" style="display: none;">
+        <main id="startScreen" class="screen" style="display: none;">
             <div class="title-area">
-                <h1 class="main-title">싹싹<br>지우개 게임</h1>
-                <p class="sub-title">가려진 곳을 🧽로 지워 무슨 그림인지 맞혀 보세요!</p>
-                <button id="btnStartGame" class="start-btn">시작하기</button>
+                <h1 class="main-title"><span class="color-1">싹</span><span class="color-2">싹</span><br>지우개 게임</h1>
+                <div class="sub-title-box">
+                    <p class="sub-title">가려진 곳을 🧽로 지워서<br>무슨 그림인지 맞혀 보세요!</p>
+                </div>
+                <button id="btnStartGame" class="start-btn">게임 시작하기 🚀</button>
             </div>
         </main>
 
-        <main id="gameScreen" style="display: none;">
+        <main id="gameScreen" class="screen" style="display: none;">
             <div class="question-banner">
-                <h2>어떤 모습일까?</h2>
+                <h2>짠! 어떤 모습일까요? 🤔</h2>
             </div>
             
             <div class="play-area">
-                <button id="btnPrev" class="nav-arrow left-arrow" style="display: none;">◀</button>
-                
-                <div class="canvas-wrapper">
+                <div class="canvas-wrapper" id="canvasWrapper">
                     <canvas id="imageCanvas"></canvas>
                     <canvas id="eraserCanvas"></canvas>
-                    <div id="imageLabel" class="image-label" style="display: none;">사진1</div>
-                </div>
-
-                <button id="btnNext" class="nav-arrow right-arrow" style="display: none;">▶</button>
-            </div>
-
-            <div class="footer-controls">
-                <button id="btnCheckAnswer" class="check-btn">✔️ 정답 확인</button>
-                <div id="finalButtons" class="final-buttons" style="display: none;">
-                    <button id="btnMoreGames" class="end-btn dark">게임 더 보기</button>
-                    <button id="btnRetry" class="end-btn dark">↻ 다시 하기</button>
+                    <div id="imageLabel" class="image-label" style="display: none;">사진 1</div>
                 </div>
             </div>
-        </main>
 
-        <div id="completionPopup" class="popup" style="display: none;">
-            <div class="popup-content">
-                <h2>게임을 완수하였습니다</h2>
+            <div class="check-area">
+                <button id="btnCheckAnswer" class="check-btn">✔️ 정답 확인하기</button>
             </div>
-        </div>
-    </div>
 
-    <script src="script.js"></script>
-</body>
-</html>
+            <div class'
