@@ -24,19 +24,18 @@ const numberSelectors = document.getElementById('numberSelectors');
 const btnRetry = document.getElementById('btnRetry');
 const btnMoreGames = document.getElementById('btnMoreGames');
 
-// 오디오 객체 설정 (지우개 효과음 제거)
 const bgm = document.getElementById('bgm');
 const sfxSuccess = document.getElementById('sfxSuccess');
 const bgmCheck = document.getElementById('bgmCheck');
 const sfxCheck = document.getElementById('sfxCheck');
 
+let audioUnlocked = false; 
 let images = []; 
 let currentIdx = 0;
 let isDrawing = false;
 let isAnswerRevealed = false;
 let eraserSize = parseInt(eraserSizeInput.value);
 
-// 데이터베이스 관련
 const DB_NAME = 'EraserKidsDB';
 const STORE_NAME = 'imageStore';
 
@@ -61,9 +60,7 @@ async function saveImages(imagesArray) {
             tx.oncomplete = () => resolve();
             tx.onerror = () => reject(tx.error);
         });
-    } catch (e) {
-        console.warn("DB 저장 실패");
-    }
+    } catch (e) { console.warn("DB 저장 실패"); }
 }
 
 async function loadImages() {
@@ -89,11 +86,9 @@ async function clearImages() {
     } catch (e) { console.warn("DB 삭제 실패"); }
 }
 
-// 배경음악 강제 재생 로직 (브라우저 정책 우회)
 function playBgmSafely() {
     if(bgmCheck.checked && bgm.paused) {
         bgm.play().catch(() => {
-            // 브라우저가 자동 재생을 막은 경우, 사용자가 화면을 클릭하면 재생되도록 예약
             document.body.addEventListener('click', () => {
                 if(bgmCheck.checked && bgm.paused) bgm.play();
             }, { once: true });
@@ -101,7 +96,6 @@ function playBgmSafely() {
     }
 }
 
-// 초기 로딩
 window.addEventListener('DOMContentLoaded', async () => {
     images = await loadImages();
     if (images && images.length > 0) {
@@ -116,7 +110,6 @@ btnResetImages.addEventListener('click', async () => {
     }
 });
 
-// 아이폰 사진 압축
 function compressImage(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -125,14 +118,14 @@ function compressImage(file) {
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                const MAX_SIZE = 800;
+                const MAX_SIZE = 1024; // 선명도를 위해 해상도 제한 상향 조정
                 let w = img.width; let h = img.height;
                 if (w > h && w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; }
                 else if (h > w && h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; }
 
                 canvas.width = w; canvas.height = h;
                 ctx.drawImage(img, 0, 0, w, h);
-                resolve(canvas.toDataURL('image/jpeg', 0.6));
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
             };
             img.onerror = () => resolve(null); 
             img.src = e.target.result;
@@ -146,7 +139,7 @@ imageLoader.addEventListener('change', async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     
-    uploadStatus.innerText = "사진을 처리하고 있습니다. 잠시만 기다려주세요...";
+    uploadStatus.innerText = "사진을 최적화하고 있습니다. 잠시만 기다려주세요...";
     images = [];
 
     try {
@@ -154,16 +147,12 @@ imageLoader.addEventListener('change', async (e) => {
             const compressed = await compressImage(files[i]);
             if (compressed) images.push(compressed);
         }
-
         if (images.length === 0) {
-            uploadStatus.innerText = "사진을 처리하지 못했습니다.";
-            return;
+            uploadStatus.innerText = "처리 실패"; return;
         }
-
         await saveImages(images);
-        uploadStatus.innerText = "준비 완료! 게임 화면으로 넘어갑니다.";
+        uploadStatus.innerText = "준비 완료!";
         setTimeout(() => { skipSetupAndStart(); }, 500);
-
     } catch (error) {
         if (images.length > 0) setTimeout(() => { skipSetupAndStart(); }, 500);
     }
@@ -176,8 +165,6 @@ function skipSetupAndStart() {
     appContainer.style.display = 'flex';
     createNumberTabs();
     totalPageSpan.innerText = images.length;
-    
-    // 게임 시작 시 배경음악 재생 시도
     playBgmSafely();
     setupStage(0);
 }
@@ -201,6 +188,13 @@ btnMoreGames.addEventListener('click', () => alert('첫 화면으로 돌아갑�
 btnCheckAnswer.addEventListener('click', revealAnswer);
 eraserSizeInput.addEventListener('input', (e) => { eraserSize = parseInt(e.target.value); });
 
+// 창 크기가 바뀔 때마다 이미지 비율을 맞추기 위해 리사이즈 대응 추가
+window.addEventListener('resize', () => {
+    if(appContainer.style.display === 'flex' && images.length > 0) {
+        setupStage(currentIdx);
+    }
+});
+
 function setupStage(index) {
     currentIdx = index;
     isAnswerRevealed = false;
@@ -216,7 +210,11 @@ function setupStage(index) {
 
     document.querySelectorAll('.num-circle').forEach((tab, i) => tab.classList.toggle('active', i === currentIdx));
 
-    const cw = 640; const ch = 420;
+    // 실제 화면 크기를 측정하여 해상도를 유연하게 세팅
+    const wrapper = document.querySelector('.canvas-wrapper');
+    const cw = wrapper.clientWidth;
+    const ch = wrapper.clientHeight;
+    
     imageCanvas.width = cw; imageCanvas.height = ch;
     eraserCanvas.width = cw; eraserCanvas.height = ch;
 
@@ -236,7 +234,6 @@ function setupStage(index) {
     img.src = images[currentIdx];
 }
 
-// 부드러운 스티플(점) 지우개 효과
 function getMousePos(e) {
     const rect = eraserCanvas.getBoundingClientRect();
     return {
@@ -248,8 +245,6 @@ function getMousePos(e) {
 function startDrawing(e) {
     if(isAnswerRevealed) return;
     isDrawing = true;
-    
-    // 사용자가 지우개를 누르면 배경음악 재생 재시도
     playBgmSafely();
     draw(e);
 }
@@ -270,7 +265,6 @@ function draw(e) {
         eraserCtx.arc(dotX, dotY, dotSize, 0, Math.PI * 2);
         eraserCtx.fill();
     }
-    // 지우개 효과음 코드가 삭제되었습니다.
 }
 
 function stopDrawing() { isDrawing = false; }
@@ -291,7 +285,6 @@ function revealAnswer() {
     
     eraserCtx.clearRect(0, 0, eraserCanvas.width, eraserCanvas.height);
     
-    // 정답 확인 시 효과음 재생
     if(sfxCheck.checked) {
         sfxSuccess.currentTime = 0;
         sfxSuccess.play().catch(()=>{});
