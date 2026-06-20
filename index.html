@@ -7,8 +7,8 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <audio id="bgm" src="https://upload.wikimedia.org/wikipedia/commons/4/41/Bassa_Island_Game_Loop.ogg" loop></audio>
-    <audio id="sfxSuccess" src="https://actions.google.com/sounds/v1/cartoon/magic_chime.ogg"></audio>
+    <audio id="bgm" src="https://assets.mixkit.co/active_storage/sfx/135/135-84.wav" loop></audio>
+    <audio id="sfxSuccess" src="https://assets.mixkit.co/active_storage/sfx/2003/2003-84.wav"></audio>
 
     <div id="setupArea" class="setup-area">
         <h2>🎨 쓱싹 퀴즈 사진 올리기</h2>
@@ -24,7 +24,6 @@
             <div class="header-left">상세보기</div>
             <div class="header-right">
                 <button id="btnResetImages" class="reset-btn">🔄 새 사진 올리기</button>
-                <div class="page-indicator"><span id="currentPage">1</span> / <span id="totalPage">3</span></div>
                 <button class="icon-btn">🧽</button>
                 <button class="icon-btn">🔊</button>
                 <div class="header-checks">
@@ -35,14 +34,11 @@
         </header>
 
         <main class="main-content">
-            <div class="bg-dot left"></div>
-            <div class="bg-dot right"></div>
-
+            <div class="question-banner">
+                <h2>어떤 모습일까?</h2>
+            </div>
+            
             <div id="gameScreen" class="screen-content">
-                <div class="question-banner">
-                    <h2>어떤 모습일까?</h2>
-                </div>
-                
                 <div class="play-area">
                     <button id="btnPrev" class="nav-arrow left-arrow">❮</button>
                     
@@ -54,7 +50,7 @@
 
                     <div class="eraser-slider-container">
                         <label for="eraserSize">지우개<br>크기</label>
-                        <input type="range" id="eraserSize" min="10" max="150" value="65" orient="vertical">
+                        <input type="range" id="eraserSize" min="10" max="150" value="60" orient="vertical">
                     </div>
 
                     <button id="btnNext" class="nav-arrow right-arrow">❯</button>
@@ -67,19 +63,12 @@
                         <button id="btnMoreGames" class="end-btn">게임 더 보기</button>
                         <button id="btnRetry" class="end-btn">↻ 다시 하기</button>
                     </div>
+
+                    <div class="number-label">사진 선택 :</div>
+                    <div id="numberSelectors" class="number-selectors"></div>
                 </div>
             </div>
         </main>
-        
-        <footer id="numberFooter" class="bottom-tabs">
-            <div class="footer-left">
-                <span class="photo-text">사진 선택 :</span>
-                <div id="numberSelectors" class="number-selectors"></div>
-            </div>
-            <div class="footer-right-menus">
-                <span class="tip-btn">TIP 문제 미리 보기</span>
-            </div>
-        </footer>
     </div>
 
     <script src="script.js"></script>
