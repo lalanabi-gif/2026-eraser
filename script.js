@@ -1,4 +1,3 @@
-// DOM 요소
 const setupArea = document.getElementById('setupArea');
 const appContainer = document.getElementById('appContainer');
 const imageLoader = document.getElementById('imageLoader');
@@ -21,27 +20,28 @@ const currentPageSpan = document.getElementById('currentPage');
 const totalPageSpan = document.getElementById('totalPage');
 
 const eraserSizeInput = document.getElementById('eraserSize');
-const numberFooter = document.getElementById('numberFooter');
 const numberSelectors = document.getElementById('numberSelectors');
-const completionPopup = document.getElementById('completionPopup');
 const btnRetry = document.getElementById('btnRetry');
 const btnMoreGames = document.getElementById('btnMoreGames');
 
-// 오디오 객체
+// 오디오 객체 설정
 const bgm = document.getElementById('bgm');
 const sfxErase = document.getElementById('sfxErase');
 const sfxSuccess = document.getElementById('sfxSuccess');
 const bgmCheck = document.getElementById('bgmCheck');
 const sfxCheck = document.getElementById('sfxCheck');
 
+// 크롬, 사파리의 오디오 자동재생 정책 해결을 위한 상호작용 변수
+let audioUnlocked = false; 
+
 let images = []; 
 let currentIdx = 0;
 let isDrawing = false;
 let isAnswerRevealed = false;
-let lastX = 0; let lastY = 0;
 let eraserSize = parseInt(eraserSizeInput.value);
+let lastSfxTime = 0; // 지우개 효과음 겹침 방지용
 
-// --- 1. 대용량 데이터베이스 (IndexedDB) 설정 ---
+// 데이터베이스 관련
 const DB_NAME = 'EraserKidsDB';
 const STORE_NAME = 'imageStore';
 
@@ -50,9 +50,7 @@ function initDB() {
         const request = indexedDB.open(DB_NAME, 2);
         request.onupgradeneeded = (e) => {
             const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME);
-            }
+            if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
         };
         request.onsuccess = (e) => resolve(e.target.result);
         request.onerror = (e) => reject(e.target.error);
@@ -69,7 +67,7 @@ async function saveImages(imagesArray) {
             tx.onerror = () => reject(tx.error);
         });
     } catch (e) {
-        console.warn("DB 저장 차단됨 (시크릿 모드 등). 현재 창에서는 정상 작동합니다.");
+        console.warn("DB 저장 실패");
     }
 }
 
@@ -82,9 +80,7 @@ async function loadImages() {
             req.onsuccess = () => resolve(req.result || []);
             req.onerror = () => resolve([]);
         });
-    } catch (e) {
-        return [];
-    }
+    } catch (e) { return []; }
 }
 
 async function clearImages() {
@@ -95,12 +91,18 @@ async function clearImages() {
             tx.objectStore(STORE_NAME).delete('current_session');
             tx.oncomplete = () => resolve();
         });
-    } catch (e) {
-        console.warn("DB 삭제 차단됨.");
-    }
+    } catch (e) { console.warn("DB 삭제 실패"); }
 }
 
-// --- 2. 자동 진입 및 에러 방지 처리된 이미지 압축 로직 ---
+// 오디오 잠금 해제 (사용자가 화면을 클릭하는 순간 정책이 풀립니다)
+document.body.addEventListener('click', () => {
+    if (!audioUnlocked && bgmCheck.checked && appContainer.style.display === 'flex') {
+        bgm.play().catch(e => console.log("오디오 재생 오류:", e));
+        audioUnlocked = true;
+    }
+}, { once: true });
+
+// 초기 로딩
 window.addEventListener('DOMContentLoaded', async () => {
     images = await loadImages();
     if (images && images.length > 0) {
@@ -115,6 +117,7 @@ btnResetImages.addEventListener('click', async () => {
     }
 });
 
+// 아이폰 사진 압축
 function compressImage(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -123,8 +126,6 @@ function compressImage(file) {
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                
-                // 가로/세로 최대 해상도를 800px로 제한하여 용량 초압축
                 const MAX_SIZE = 800;
                 let w = img.width; let h = img.height;
                 if (w > h && w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; }
@@ -134,17 +135,10 @@ function compressImage(file) {
                 ctx.drawImage(img, 0, 0, w, h);
                 resolve(canvas.toDataURL('image/jpeg', 0.6));
             };
-            img.onerror = () => {
-                // 이미지가 깨졌거나 읽을 수 없는 포맷일 경우 오류를 무시하고 진행
-                console.error("이미지 로드 실패:", file.name);
-                resolve(null); 
-            };
+            img.onerror = () => resolve(null); 
             img.src = e.target.result;
         };
-        reader.onerror = () => {
-            console.error("파일 읽기 실패");
-            resolve(null);
-        };
+        reader.onerror = () => resolve(null);
         reader.readAsDataURL(file);
     });
 }
@@ -156,51 +150,33 @@ imageLoader.addEventListener('change', async (e) => {
     uploadStatus.innerText = "아이폰 사진을 처리하고 있습니다. 잠시만 기다려주세요...";
     images = [];
 
-    // 안전장치: 오류가 발생하더라도 멈추지 않고 다음 단계로 무조건 넘어가도록 try-catch 적용
     try {
         for (let i = 0; i < files.length; i++) {
             const compressed = await compressImage(files[i]);
-            if (compressed) {
-                images.push(compressed);
-            }
+            if (compressed) images.push(compressed);
         }
 
         if (images.length === 0) {
-            uploadStatus.innerText = "사진을 처리하지 못했습니다. 다른 사진으로 시도해주세요.";
+            uploadStatus.innerText = "사진을 처리하지 못했습니다.";
             return;
         }
 
         await saveImages(images);
         uploadStatus.innerText = "준비 완료! 게임 화면으로 넘어갑니다.";
-        
-        // 0.5초 뒤 무조건 화면 전환
-        setTimeout(() => {
-            skipSetupAndStart();
-        }, 500);
+        setTimeout(() => { skipSetupAndStart(); }, 500);
 
     } catch (error) {
-        console.error("업로드 중 에러 발생:", error);
-        uploadStatus.innerText = "처리 중 에러가 발생했지만 강제로 진행합니다.";
-        // 에러가 나도 이미지가 메모리에 1장이라도 있다면 강제 실행
-        if (images.length > 0) {
-            setTimeout(() => { skipSetupAndStart(); }, 500);
-        }
+        if (images.length > 0) setTimeout(() => { skipSetupAndStart(); }, 500);
     }
 });
 
-// 백업용 버튼
 btnInitStart.addEventListener('click', skipSetupAndStart);
 
 function skipSetupAndStart() {
     setupArea.style.display = 'none';
     appContainer.style.display = 'flex';
-    
     createNumberTabs();
     totalPageSpan.innerText = images.length;
-    
-    if(bgmCheck.checked) {
-        bgm.play().catch(() => console.log("사운드 권한 대기 중 (화면을 한 번 클릭하면 소리가 납니다)"));
-    }
     setupStage(0);
 }
 
@@ -215,7 +191,6 @@ function createNumberTabs() {
     }
 }
 
-// --- 3. 스테이지 및 조작 제어 ---
 bgmCheck.addEventListener('change', (e) => { e.target.checked ? bgm.play() : bgm.pause(); });
 btnPrev.addEventListener('click', () => { if(currentIdx > 0) setupStage(currentIdx - 1); });
 btnNext.addEventListener('click', () => { if(currentIdx < images.length - 1) setupStage(currentIdx + 1); });
@@ -259,7 +234,7 @@ function setupStage(index) {
     img.src = images[currentIdx];
 }
 
-// --- 4. 점점이 묻어나오는 지우개 효과 로직 ---
+// 부드러운 스티플(점) 지우개 효과
 function getMousePos(e) {
     const rect = eraserCanvas.getBoundingClientRect();
     return {
@@ -272,9 +247,10 @@ function startDrawing(e) {
     if(isAnswerRevealed) return;
     isDrawing = true;
     
-    // 사운드 권한 획득 처리 (최초 클릭 시)
-    if(bgmCheck.checked && bgm.paused) {
+    // 첫 클릭 시 오디오 잠금 해제 지원
+    if (!audioUnlocked && bgmCheck.checked) {
         bgm.play().catch(()=>{});
+        audioUnlocked = true;
     }
     draw(e);
 }
@@ -284,21 +260,24 @@ function draw(e) {
     const pos = getMousePos(e.touches ? e.touches[0] : e);
 
     eraserCtx.globalCompositeOperation = 'destination-out';
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 15; i++) {
         const angle = Math.random() * Math.PI * 2;
         const radius = Math.random() * (eraserSize / 2);
         const dotX = pos.x + Math.cos(angle) * radius;
         const dotY = pos.y + Math.sin(angle) * radius;
-        const dotSize = Math.random() * (eraserSize / 5) + 2;
+        const dotSize = Math.random() * (eraserSize / 4) + 2;
 
         eraserCtx.beginPath();
         eraserCtx.arc(dotX, dotY, dotSize, 0, Math.PI * 2);
         eraserCtx.fill();
     }
 
-    if(sfxCheck.checked) {
-        // 소리가 너무 자주 끊기지 않도록 가볍게 재생
+    // 소리가 너무 겹쳐서 깨지지 않도록 (300ms 간격으로 재생)
+    const now = Date.now();
+    if(sfxCheck.checked && (now - lastSfxTime > 300)) {
+        sfxErase.currentTime = 0;
         sfxErase.play().catch(()=>{});
+        lastSfxTime = now;
     }
 }
 
@@ -312,7 +291,6 @@ eraserCanvas.addEventListener('touchstart', startDrawing, {passive: false});
 eraserCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); }, {passive: false});
 window.addEventListener('touchend', stopDrawing);
 
-// --- 5. 정답 확인 및 성공 연출 ---
 function revealAnswer() {
     isAnswerRevealed = true;
     btnCheckAnswer.style.display = 'none';
@@ -326,10 +304,5 @@ function revealAnswer() {
         sfxSuccess.play().catch(()=>{});
     }
     
-    if (currentIdx === images.length - 1) {
-        setTimeout(() => {
-            completionPopup.style.display = 'flex';
-            setTimeout(() => completionPopup.style.display = 'none', 2500);
-        }, 300);
-    }
+    // 팝업 띄우는 로직은 완전히 제거되었습니다!
 }

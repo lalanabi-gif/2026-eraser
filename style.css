@@ -2,12 +2,11 @@
 
 body {
     margin: 0; padding: 0;
-    background-color: #f7d6e0; /* 부드러운 핑크빛 배경 */
+    background-color: #f7d6e0; 
     display: flex; justify-content: center; align-items: center;
     height: 100vh; font-family: 'Jua', sans-serif;
 }
 
-/* 설정 화면 전용 스타일 */
 .setup-area {
     text-align: center; background: white; padding: 40px 60px; 
     border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
@@ -27,14 +26,12 @@ body {
     background: #4caf50; color: white; border: none; cursor: pointer; border-radius: 20px;
 }
 
-/* 메인 앱 컨테이너 */
 .app-container {
     width: 100%; max-width: 1000px; height: 90vh;
     background-color: white; display: flex; flex-direction: column;
     box-shadow: 0 10px 30px rgba(0,0,0,0.15); border-radius: 20px; overflow: hidden;
 }
 
-/* 보라색 헤더 */
 header {
     background-color: #8b51ff; color: white;
     height: 55px; display: flex; justify-content: center; align-items: center;
@@ -47,7 +44,6 @@ header {
 .icon-btn { background: #c1e3ff; border: 2px solid #333; border-radius: 15px; padding: 3px 10px; cursor: pointer; }
 .header-checks { display: flex; gap: 5px; color: white; margin-left: 5px; }
 
-/* 노란색 메인 배경 */
 .main-content {
     flex: 1; background-color: #f6c445; position: relative;
     display: flex; justify-content: center; align-items: center;
@@ -59,34 +55,28 @@ header {
 
 .screen-content { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 
-/* 질문 배너 */
 .question-banner { background: #fdf5e6; width: 85%; text-align: center; padding: 12px; border-top: 4px solid white; border-bottom: 2px solid #333; margin-bottom: 15px; }
 .question-banner h2 { margin: 0; font-size: 22px; color: #333; }
 
 .play-area { display: flex; align-items: center; justify-content: center; width: 100%; gap: 15px; }
 
-/* 캔버스 */
 .canvas-wrapper { position: relative; width: 640px; height: 420px; background-color: white; border: 3px solid #333; }
 #imageCanvas, #eraserCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none; }
-#eraserCanvas { z-index: 2; }
+#eraserCanvas { z-index: 2; cursor: pointer; }
 .image-label { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,0.95); padding: 8px 30px; font-size: 26px; color: #333; z-index: 3; border: 2px solid #333; border-radius: 10px; }
 
-/* 지우개 크기 슬라이더 */
 .eraser-slider-container { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.6); padding: 15px 8px; border-radius: 10px; border: 2px solid #333; }
 .eraser-slider-container label { font-size: 14px; text-align: center; margin-bottom: 8px; color: #463e30; line-height: 1.2; }
 #eraserSize { -webkit-appearance: slider-vertical; writing-mode: bt-lr; width: 12px; height: 180px; cursor: pointer; }
 
-/* 화살표 */
 .nav-arrow { background: rgba(255,255,255,0.9); border: 2px solid #333; font-size: 24px; width: 45px; height: 60px; cursor: pointer; color: #333; border-radius: 30px; }
 
-/* 하단 버튼 */
 .bottom-controls { margin-top: 15px; height: 50px; }
 .check-btn { background: white; color: #333; border: 3px solid #333; padding: 8px 40px; font-size: 20px; font-family: 'Jua', sans-serif; border-radius: 30px; cursor: pointer; box-shadow: 0 4px 0 #333; }
 .check-btn:active { transform: translateY(4px); box-shadow: none; }
 .action-buttons { display: flex; gap: 15px; }
 .end-btn { background: #463e30; color: white; border: 2px solid #333; padding: 8px 25px; font-size: 18px; font-family: 'Jua', sans-serif; border-radius: 8px; cursor: pointer; }
 
-/* 하단 탭 (원형 숫자) */
 .bottom-tabs { display: flex; justify-content: space-between; align-items: center; padding: 10px 25px; background: white; border-top: 1px solid #ddd; }
 .footer-left { display: flex; align-items: center; gap: 15px; }
 .photo-text { font-size: 18px; color: #333; }
@@ -99,11 +89,3 @@ header {
 }
 .num-circle.active { background: #8b51ff; border-color: #8b51ff; color: white; transform: scale(1.1); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
 .tip-btn { border: 2px solid #00acc1; color: #00acc1; padding: 6px 15px; font-size: 14px; border-radius: 20px; font-family: sans-serif; font-weight: bold; }
-
-/* 팝업 */
-.popup { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 100; }
-.popup-content { background: white; padding: 40px 80px; border-radius: 15px; text-align: center; border: 3px solid #333; animation: popIn 0.3s ease; }
-.cat-sticker { font-size: 70px; margin-bottom: 10px; }
-.popup-content h2 { margin: 0; font-size: 32px; color: #d88e00; }
-
-@keyframes popIn { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
