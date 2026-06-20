@@ -1,175 +1,276 @@
-/* 기본 스타일 */
+@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap'); /* 귀여운 폰트 적용 */
+
 body {
-    font-family: 'Nanum Gothic', sans-serif;
-    background-color: #fcf1d4; /* 부드러운 노란색 배경 */
     margin: 0;
+    padding: 0;
+    background-color: #f0f0f0;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-    overflow: hidden;
+    font-family: 'Jua', sans-serif;
 }
 
-/* 앱 컨테이너 */
 .app-container {
-    background-color: #fff;
-    border-radius: 20px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    width: 90%;
-    max-width: 1100px;
+    width: 100%;
+    max-width: 1000px;
     height: 90vh;
+    background-color: #F8CB58; /* 노란색 배경 */
+    border-radius: 10px;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    position: relative;
 }
 
-/* 헤더 */
+/* 헤더 영역 */
 header {
-    background-color: #9b59b6; /* 보라색 헤더 */
-    color: #fff;
-    padding: 15px 25px;
+    background-color: #8C52FF; /* 보라색 헤더 */
+    color: white;
+    height: 60px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 0 20px;
 }
 
 header h1 {
     margin: 0;
-    font-size: 28px;
-    font-weight: bold;
+    font-size: 24px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
-.header-controls {
+.header-right {
     display: flex;
     align-items: center;
+    gap: 10px;
+    margin-left: auto;
 }
 
-#imageLoader {
-    display: none; /* 기본 파일 인풋 숨김 */
+.page-indicator {
+    background: white;
+    color: #333;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 18px;
 }
 
-.upload-btn {
-    background-color: #fff;
-    color: #9b59b6;
-    padding: 10px 25px;
-    border-radius: 25px;
+.icon-btn {
+    background: white;
+    border: none;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    font-size: 18px;
     cursor: pointer;
-    font-weight: bold;
-    font-size: 16px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-.upload-btn:hover {
-    background-color: #f0f0f0;
-    transform: translateY(-2px);
-}
-
-/* 메인 게임 영역 */
+/* 메인 영역 공통 */
 main {
     flex: 1;
-    padding: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-}
-
-.game-area {
-    display: flex;
-    align-items: center;
-    position: relative;
-    padding-right: 80px; /* 지우개 바 공간 확보 */
-}
-
-/* 캔버스 컨테이너 및 캔버스 */
-.canvas-container {
-    position: relative;
-    border: 8px solid #e67e22; /* 주황색 테두리 */
-    border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    background-color: #eee;
-    overflow: hidden;
-}
-
-#imageCanvas, #eraserCanvas {
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23333" d="M16.24 3.56l4.95 4.95c.78.78.78 2.05 0 2.83L11.1 21.43a1.996 1.996 0 0 1-2.83 0l-4.95-4.95a1.996 1.996 0 0 1 0-2.83L13.41 3.56c.78-.79 2.05-.79 2.83 0M6.15 14.65L10.4 18.9l3.18-3.18l-4.25-4.24l-3.18 3.17Z"/></svg>'), auto; /* 지우개 모양 커서 (선택사항) */
-}
-
-#eraserCanvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-}
-
-/* 지우개 크기 조절 바 */
-.eraser-size-control {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 60px;
+    position: relative;
+    padding: 20px;
 }
 
-.eraser-size-control label {
-    font-size: 14px;
-    color: #e67e22;
-    font-weight: bold;
-    margin-bottom: 10px;
+/* 1. 업로드 화면 */
+.upload-box {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
     text-align: center;
-    line-height: 1.2;
+    margin-top: 100px;
 }
 
-#eraserSize {
-    -webkit-appearance: slider-vertical; /* Webkit 세로 슬라이더 */
-    writing-mode: bt-lr; /* IE/Edge 세로 슬라이더 */
-    width: 15px;
-    height: 250px;
-    cursor: pointer;
-}
+#imageLoader { display: none; }
 
-/* 하단 사진 선택 영역 */
-footer {
-    padding: 15px 25px;
-    border-top: 1px solid #f0f0f0;
-    display: flex;
-    justify-content: center;
-    background-color: #fafafa;
-}
-
-.image-selector {
-    display: flex;
-    gap: 15px;
-}
-
-.selector-btn {
-    background-color: #f0f0f0;
-    border: 2px solid #ccc;
-    color: #555;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    cursor: pointer;
+.upload-btn {
+    display: inline-block;
+    background: #8C52FF;
+    color: white;
+    padding: 15px 30px;
+    border-radius: 30px;
     font-size: 20px;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+.action-btn {
+    margin-top: 20px;
+    padding: 10px 40px;
+    font-size: 20px;
+    background: #4A4535;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+/* 2. 시작 화면 */
+.title-area {
+    text-align: center;
+    margin-top: 80px;
+}
+
+.main-title {
+    font-size: 80px;
+    color: #333;
+    line-height: 1.1;
+    text-shadow: 3px 3px 0 #fff;
+    margin-bottom: 10px;
+}
+
+.sub-title {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 40px;
+}
+
+.start-btn {
+    background: #4A4535;
+    color: white;
+    font-family: 'Jua', sans-serif;
+    font-size: 28px;
+    padding: 15px 60px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #2a271e;
+}
+
+/* 3. 게임 화면 */
+.question-banner {
+    background: white;
+    width: 80%;
+    text-align: center;
+    padding: 10px;
+    border-bottom: 4px solid #333;
+    margin-bottom: 20px;
+}
+
+.question-banner h2 {
+    margin: 0;
+    font-size: 28px;
+    color: #333;
+}
+
+.play-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    flex: 1;
+    position: relative;
+}
+
+.canvas-wrapper {
+    position: relative;
+    width: 600px;
+    height: 400px;
+    background-color: white;
+    border: 3px solid #333;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+#imageCanvas, #eraserCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* 캔버스 커서를 지우개 모양으로 설정 */
+#eraserCanvas {
+    z-index: 2;
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="white" stroke="black" stroke-width="1.5" d="M16.24 3.56l4.95 4.95c.78.78.78 2.05 0 2.83L11.1 21.43a1.996 1.996 0 0 1-2.83 0l-4.95-4.95a1.996 1.996 0 0 1 0-2.83L13.41 3.56c.78-.79 2.05-.79 2.83 0M6.15 14.65L10.4 18.9l3.18-3.18l-4.25-4.24l-3.18 3.17Z"/></svg>') 0 24, auto;
+}
+
+/* 사진 라벨 (사진1, 사진2...) */
+.image-label {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 5px 20px;
+    border-radius: 5px;
+    font-size: 24px;
     font-weight: bold;
+    z-index: 3;
+    border: 2px solid #333;
+}
+
+/* 좌우 이동 화살표 */
+.nav-arrow {
+    background: rgba(255, 255, 255, 0.8);
+    border: none;
+    font-size: 30px;
+    width: 50px;
+    height: 80px;
+    cursor: pointer;
+    position: absolute;
+    z-index: 10;
+}
+.left-arrow { left: 10px; border-radius: 0 40px 40px 0; }
+.right-arrow { right: 10px; border-radius: 40px 0 0 40px; }
+
+/* 하단 버튼 */
+.footer-controls {
+    margin-top: 20px;
+    height: 60px;
+}
+
+.check-btn {
+    background: #F8CB58; /* 배경과 동일 */
+    color: #333;
+    border: 3px solid #333;
+    padding: 10px 30px;
+    font-size: 24px;
+    font-family: 'Jua', sans-serif;
+    border-radius: 10px;
+    cursor: pointer;
+    background-color: white;
+}
+
+.end-btn {
+    background: #4A4535;
+    color: white;
+    border: none;
+    padding: 10px 30px;
+    font-size: 20px;
+    font-family: 'Jua', sans-serif;
+    border-radius: 10px;
+    margin: 0 5px;
+    cursor: pointer;
+}
+
+/* 완료 팝업 */
+.popup {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
     display: flex;
     justify-content: center;
     align-items: center;
-    transition: all 0.2s ease;
+    z-index: 100;
 }
 
-.selector-btn.active {
-    background-color: #e67e22;
-    color: #fff;
-    border-color: #d35400;
-    transform: scale(1.1);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+.popup-content {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    border: 5px solid #8C52FF;
+    animation: popIn 0.3s ease-out;
 }
 
-.selector-btn:hover:not(.active) {
-    background-color: #e0e0e0;
-    border-color: #bbb;
+@keyframes popIn {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
 }

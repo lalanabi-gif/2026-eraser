@@ -3,44 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>싹싹 지우개 퀴즈 게임</title>
+    <title>싹싹 지우개 게임</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="app-container">
         <header>
-            <h1>싹싹 지우개 퀴즈</h1>
-            <div class="header-controls">
-                <input type="file" id="imageLoader" accept="image/*" multiple>
-                <label for="imageLoader" class="upload-btn">이미지 업로드</label>
+            <div class="header-left"></div>
+            <h1>상세보기</h1>
+            <div class="header-right" id="headerRight" style="display: none;">
+                <div class="page-indicator"><span id="currentPage">1</span> / <span id="totalPage">3</span></div>
+                <button class="icon-btn eraser-icon">🧽</button>
+                <button class="icon-btn sound-icon">🔊</button>
             </div>
         </header>
 
-        <main>
-            <div class="game-area">
-                <div class="canvas-wrapper" id="canvasWrapper">
-                    <canvas id="imageCanvas"></canvas>
-                    <canvas id="eraserCanvas"></canvas>
-                </div>
-                
-                <div class="eraser-size-control">
-                    <label for="eraserSize">지우개<br>크기</label>
-                    <input type="range" id="eraserSize" min="10" max="150" value="50" orient="vertical">
-                </div>
-            </div>
-
-            <div class="action-buttons">
-                <button id="btnMoreGames" class="action-btn outline">게임 더 보기</button>
-                <button id="btnRetry" class="action-btn fill">다시 하기</button>
+        <main id="uploadScreen">
+            <div class="upload-box">
+                <h2>문제를 만들 사진을 올려주세요</h2>
+                <input type="file" id="imageLoader" accept="image/*" multiple>
+                <label for="imageLoader" class="upload-btn">+ 사진 추가하기</label>
+                <p id="uploadStatus"></p>
+                <button id="btnGoToStart" class="action-btn" style="display: none;">완료</button>
             </div>
         </main>
 
-        <footer>
-            <div id="imageSelector" class="image-selector">
-                <p class="empty-msg">오른쪽 위 '이미지 업로드'를 눌러 사진을 추가해 주세요!</p>
+        <main id="startScreen" style="display: none;">
+            <div class="title-area">
+                <h1 class="main-title">싹싹<br>지우개 게임</h1>
+                <p class="sub-title">가려진 곳을 🧽로 지워 무슨 그림인지 맞혀 보세요!</p>
+                <button id="btnStartGame" class="start-btn">시작하기</button>
             </div>
-        </footer>
+        </main>
+
+        <main id="gameScreen" style="display: none;">
+            <div class="question-banner">
+                <h2>어떤 모습일까?</h2>
+            </div>
+            
+            <div class="play-area">
+                <button id="btnPrev" class="nav-arrow left-arrow" style="display: none;">◀</button>
+                
+                <div class="canvas-wrapper">
+                    <canvas id="imageCanvas"></canvas>
+                    <canvas id="eraserCanvas"></canvas>
+                    <div id="imageLabel" class="image-label" style="display: none;">사진1</div>
+                </div>
+
+                <button id="btnNext" class="nav-arrow right-arrow" style="display: none;">▶</button>
+            </div>
+
+            <div class="footer-controls">
+                <button id="btnCheckAnswer" class="check-btn">✔️ 정답 확인</button>
+                <div id="finalButtons" class="final-buttons" style="display: none;">
+                    <button id="btnMoreGames" class="end-btn dark">게임 더 보기</button>
+                    <button id="btnRetry" class="end-btn dark">↻ 다시 하기</button>
+                </div>
+            </div>
+        </main>
+
+        <div id="completionPopup" class="popup" style="display: none;">
+            <div class="popup-content">
+                <h2>게임을 완수하였습니다</h2>
+            </div>
+        </div>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>
