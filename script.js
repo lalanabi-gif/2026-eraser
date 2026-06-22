@@ -31,8 +31,8 @@ let images = [];
 let currentIdx = 0;
 let isDrawing = false;
 let isAnswerRevealed = false;
-let eraserSize = parseInt(eraserSizeInput.value); // HTML에서 150으로 설정된 값을 가져옴
-let lastSfxTime = 0; // 지우개 소리 겹침 방지 타이머
+let eraserSize = parseInt(eraserSizeInput.value); 
+let lastSfxTime = 0; // 마법 소리 자연스러운 재생을 위한 타이머
 
 const DB_NAME = 'EraserKidsDB';
 const STORE_NAME = 'imageStore';
@@ -260,9 +260,9 @@ function draw(e) {
         eraserCtx.fill();
     }
 
-    // 0.15초 간격으로 산뜻한 '뽁뽁뽁' 효과음 재생 (소리가 시끄럽게 겹치는 것 방지)
+    // 샤라랑~ 마법 가루 소리가 부드럽게 이어지도록 재생 간격 조정 (0.3초)
     const now = Date.now();
-    if(sfxCheck.checked && (now - lastSfxTime > 150)) {
+    if(sfxCheck.checked && (now - lastSfxTime > 300)) {
         sfxErase.currentTime = 0;
         sfxErase.play().catch(()=>{});
         lastSfxTime = now;
@@ -287,7 +287,7 @@ function revealAnswer() {
     
     eraserCtx.clearRect(0, 0, eraserCanvas.width, eraserCanvas.height);
     
-    // 정답 확인 시 딩동댕 소리 재생
+    // 정답 확인 시 요술봉 뾰로롱! 소리 재생
     if(sfxCheck.checked) {
         sfxSuccess.currentTime = 0;
         sfxSuccess.play().catch(()=>{});
