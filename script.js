@@ -22,9 +22,8 @@ const btnRetry = document.getElementById('btnRetry');
 const btnMoreGames = document.getElementById('btnMoreGames');
 
 const bgm = document.getElementById('bgm');
-const sfxSuccess = document.getElementById('sfxSuccess');
-// 지우개 효과음 추가
 const sfxErase = document.getElementById('sfxErase');
+const sfxSuccess = document.getElementById('sfxSuccess');
 const bgmCheck = document.getElementById('bgmCheck');
 const sfxCheck = document.getElementById('sfxCheck');
 
@@ -32,10 +31,39 @@ let images = [];
 let currentIdx = 0;
 let isDrawing = false;
 let isAnswerRevealed = false;
-let eraserSize = parseInt(eraserSizeInput.value);
-// 지우개 소리가 너무 시끄럽게 겹치지 않게 조절하기 위한 타이머 변수
-let lastSfxTime = 0; 
+let eraserSize = 150; // 기본 크기 최대치(150)로 세팅
+let lastSfxTime = 0;
+let audioUnlocked = false;
 
+// --- 오디오 강제 잠금 해제 ---
+function unlockAudio() {
+    if (audioUnlocked) return;
+    [bgm, sfxErase, sfxSuccess].forEach(audio => {
+        audio.muted = true;
+        audio.play().then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.muted = false;
+        }).catch(e => console.warn("오디오 권한 획득 대기 중"));
+    });
+    audioUnlocked = true;
+    
+    // 게임 화면에 들어와 있다면 바로 브금 재생
+    if (bgmCheck.checked && appContainer.style.display === 'flex') {
+        bgm.play().catch(()=>{});
+    }
+}
+// 클릭 및 터치 시 권한 획득
+document.body.addEventListener('click', unlockAudio, { once: true });
+document.body.addEventListener('touchstart', unlockAudio, { once: true });
+
+function playBgmSafely() {
+    if(bgmCheck.checked && bgm.paused && audioUnlocked) {
+        bgm.play().catch(()=>{});
+    }
+}
+
+// --- 데이터베이스 ---
 const DB_NAME = 'EraserKidsDB';
 const STORE_NAME = 'imageStore';
 
@@ -59,7 +87,7 @@ async function saveImages(imagesArray) {
             tx.objectStore(STORE_NAME).put(imagesArray, 'current_session');
             tx.oncomplete = () => resolve();
         });
-    } catch (e) { console.warn("DB 저장 차단됨"); }
+    } catch (e) {}
 }
 
 async function loadImages() {
@@ -82,21 +110,10 @@ async function clearImages() {
             tx.objectStore(STORE_NAME).delete('current_session');
             tx.oncomplete = () => resolve();
         });
-    } catch (e) { console.warn("DB 삭제 차단됨"); }
+    } catch (e) {}
 }
 
-// 사운드 재생 헬퍼 함수
-function playBgmSafely() {
-    if(bgmCheck.checked && bgm.paused) {
-        bgm.play().catch(() => {
-            // 브라우저가 막으면 사용자 클릭 시 대기했다가 재생
-            document.body.addEventListener('click', () => {
-                if(bgmCheck.checked && bgm.paused) bgm.play();
-            }, { once: true });
-        });
-    }
-}
-
+// 초기 세팅
 window.addEventListener('DOMContentLoaded', async () => {
     images = await loadImages();
     if (images && images.length > 0) {
@@ -136,26 +153,26 @@ function compressImage(file) {
     });
 }
 
+// 업로드 이벤트: 즉각적으로 화면 넘어가도록 보강
 imageLoader.addEventListener('change', async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     
-    uploadStatus.innerText = "사진을 최적화하고 있습니다. 잠시만 기다려주세요...";
+    uploadStatus.innerText = "사진을 설정하고 있습니다...";
     images = [];
 
-    try {
-        for (let i = 0; i < files.length; i++) {
-            const compressed = await compressImage(files[i]);
-            if (compressed) images.push(compressed);
-        }
-        if (images.length === 0) {
-            uploadStatus.innerText = "처리 실패"; return;
-        }
-        await saveImages(images);
+    for (let i = 0; i < files.length; i++) {
+        const compressed = await compressImage(files[i]);
+        if (compressed) images.push(compressed);
+    }
+
+    if (images.length > 0) {
+        saveImages(images); // DB 저장은 백그라운드에서 진행
         uploadStatus.innerText = "준비 완료!";
-        setTimeout(() => { skipSetupAndStart(); }, 500);
-    } catch (error) {
-        if (images.length > 0) setTimeout(() => { skipSetupAndStart(); }, 500);
+        // 1. 화면 즉시 전환 (막힘 방지)
+        skipSetupAndStart();
+    } else {
+        uploadStatus.innerText = "처리 실패. 다른 사진을 올려주세요.";
     }
 });
 
@@ -165,7 +182,7 @@ function skipSetupAndStart() {
     setupArea.style.display = 'none';
     appContainer.style.display = 'flex';
     createNumberTabs();
-    playBgmSafely();
+    playBgmSafely(); 
     setupStage(0);
 }
 
@@ -175,15 +192,18 @@ function createNumberTabs() {
         const btn = document.createElement('div');
         btn.className = 'num-circle';
         btn.innerText = i + 1;
-        btn.onclick = () => setupStage(i);
+        btn.onclick = () => { playBgmSafely(); setupStage(i); };
         numberSelectors.appendChild(btn);
     }
 }
 
+// 오디오 체크박스
 bgmCheck.addEventListener('change', (e) => { e.target.checked ? playBgmSafely() : bgm.pause(); });
-btnPrev.addEventListener('click', () => { if(currentIdx > 0) setupStage(currentIdx - 1); });
-btnNext.addEventListener('click', () => { if(currentIdx < images.length - 1) setupStage(currentIdx + 1); });
-btnRetry.addEventListener('click', () => setupStage(currentIdx));
+
+// 버튼 기능
+btnPrev.addEventListener('click', () => { playBgmSafely(); if(currentIdx > 0) setupStage(currentIdx - 1); });
+btnNext.addEventListener('click', () => { playBgmSafely(); if(currentIdx < images.length - 1) setupStage(currentIdx + 1); });
+btnRetry.addEventListener('click', () => { playBgmSafely(); setupStage(currentIdx); });
 btnMoreGames.addEventListener('click', () => alert('첫 화면으로 돌아갑니다.'));
 btnCheckAnswer.addEventListener('click', revealAnswer);
 eraserSizeInput.addEventListener('input', (e) => { eraserSize = parseInt(e.target.value); });
@@ -217,7 +237,6 @@ function setupStage(index) {
 
     const img = new Image();
     img.onload = () => {
-        // 이미지 비율 유지 크기 계산
         const scale = Math.min(cw / img.width, ch / img.height);
         const w = img.width * scale; const h = img.height * scale;
         const dx = (cw - w) / 2; const dy = (ch - h) / 2;
@@ -233,6 +252,7 @@ function setupStage(index) {
     img.src = images[currentIdx];
 }
 
+// 캔버스 마우스 위치 계산
 function getMousePos(e) {
     const rect = eraserCanvas.getBoundingClientRect();
     return {
@@ -244,7 +264,7 @@ function getMousePos(e) {
 function startDrawing(e) {
     if(isAnswerRevealed) return;
     isDrawing = true;
-    playBgmSafely(); // 클릭 시 오디오 차단 해제 유도
+    unlockAudio(); // 지우개를 누를 때도 오디오 권한 확실히 얻기
     draw(e);
 }
 
@@ -265,9 +285,9 @@ function draw(e) {
         eraserCtx.fill();
     }
 
-    // 샤사라랑 마법 효과음 재생 (0.3초 간격으로 재생하여 자연스럽게 이어지도록 설정)
+    // 3. 샤사라랑~ 마법 지우개 효과음! (너무 시끄럽지 않게 0.3초 쿨타임)
     const now = Date.now();
-    if(sfxCheck.checked && (now - lastSfxTime > 300)) {
+    if(sfxCheck.checked && audioUnlocked && (now - lastSfxTime > 300)) {
         sfxErase.currentTime = 0;
         sfxErase.play().catch(()=>{});
         lastSfxTime = now;
@@ -286,14 +306,16 @@ window.addEventListener('touchend', stopDrawing);
 
 function revealAnswer() {
     isAnswerRevealed = true;
+    
     btnCheckAnswer.style.display = 'none';
     actionButtons.style.display = 'flex';
     imageLabel.style.display = 'block';
     
     eraserCtx.clearRect(0, 0, eraserCanvas.width, eraserCanvas.height);
     
-    if(sfxCheck.checked) {
+    // 정답 확인 시 요술봉 뾰로롱 효과음!
+    if(sfxCheck.checked && audioUnlocked) {
         sfxSuccess.currentTime = 0;
-        sfxSuccess.play().catch(()=>{});
+        sfxSuccess.play().catch(e => console.log("정답 효과음 재생 오류"));
     }
 }
