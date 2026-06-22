@@ -22,6 +22,7 @@ const btnRetry = document.getElementById('btnRetry');
 const btnMoreGames = document.getElementById('btnMoreGames');
 
 const bgm = document.getElementById('bgm');
+const sfxErase = document.getElementById('sfxErase');
 const sfxSuccess = document.getElementById('sfxSuccess');
 const bgmCheck = document.getElementById('bgmCheck');
 const sfxCheck = document.getElementById('sfxCheck');
@@ -30,7 +31,8 @@ let images = [];
 let currentIdx = 0;
 let isDrawing = false;
 let isAnswerRevealed = false;
-let eraserSize = parseInt(eraserSizeInput.value);
+let eraserSize = parseInt(eraserSizeInput.value); // HTML에서 150으로 설정된 값을 가져옴
+let lastSfxTime = 0; // 지우개 소리 겹침 방지 타이머
 
 const DB_NAME = 'EraserKidsDB';
 const STORE_NAME = 'imageStore';
@@ -81,11 +83,9 @@ async function clearImages() {
     } catch (e) { console.warn("DB 삭제 차단됨"); }
 }
 
-// 사운드 재생 헬퍼 함수
 function playBgmSafely() {
     if(bgmCheck.checked && bgm.paused) {
         bgm.play().catch(() => {
-            // 브라우저가 막으면 사용자 클릭 시 대기했다가 재생
             document.body.addEventListener('click', () => {
                 if(bgmCheck.checked && bgm.paused) bgm.play();
             }, { once: true });
@@ -213,7 +213,6 @@ function setupStage(index) {
 
     const img = new Image();
     img.onload = () => {
-        // 이미지 비율 유지 크기 계산
         const scale = Math.min(cw / img.width, ch / img.height);
         const w = img.width * scale; const h = img.height * scale;
         const dx = (cw - w) / 2; const dy = (ch - h) / 2;
@@ -222,7 +221,6 @@ function setupStage(index) {
         imageCtx.drawImage(img, dx, dy, w, h);
         
         eraserCtx.globalCompositeOperation = 'source-over';
-        // 핵심 수정: 캔버스 전체가 아니라, '사진이 그려진 영역'에만 정확히 가림막을 씌웁니다!
         eraserCtx.clearRect(0, 0, cw, ch);
         eraserCtx.fillStyle = '#463e30'; 
         eraserCtx.fillRect(dx, dy, w, h);
@@ -241,7 +239,7 @@ function getMousePos(e) {
 function startDrawing(e) {
     if(isAnswerRevealed) return;
     isDrawing = true;
-    playBgmSafely(); // 클릭 시 오디오 차단 해제 유도
+    playBgmSafely(); 
     draw(e);
 }
 
@@ -261,6 +259,14 @@ function draw(e) {
         eraserCtx.arc(dotX, dotY, dotSize, 0, Math.PI * 2);
         eraserCtx.fill();
     }
+
+    // 0.15초 간격으로 산뜻한 '뽁뽁뽁' 효과음 재생 (소리가 시끄럽게 겹치는 것 방지)
+    const now = Date.now();
+    if(sfxCheck.checked && (now - lastSfxTime > 150)) {
+        sfxErase.currentTime = 0;
+        sfxErase.play().catch(()=>{});
+        lastSfxTime = now;
+    }
 }
 
 function stopDrawing() { isDrawing = false; }
@@ -279,10 +285,9 @@ function revealAnswer() {
     actionButtons.style.display = 'flex';
     imageLabel.style.display = 'block';
     
-    // 남은 가림막 지우기
     eraserCtx.clearRect(0, 0, eraserCanvas.width, eraserCanvas.height);
     
-    // 정답 확인 시 설정이 켜져있다면 딩동댕 소리 재생!
+    // 정답 확인 시 딩동댕 소리 재생
     if(sfxCheck.checked) {
         sfxSuccess.currentTime = 0;
         sfxSuccess.play().catch(()=>{});
