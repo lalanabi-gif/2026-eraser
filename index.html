@@ -7,9 +7,12 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <audio id="bgm" src="https://assets.mixkit.co/sfx/preview/mixkit-funny-puzzle-game-loop-2886.mp3" loop preload="auto"></audio>
-    <audio id="sfxErase" src="https://assets.mixkit.co/sfx/preview/mixkit-bubble-pop-up-232.mp3" preload="auto"></audio>
-    <audio id="sfxSuccess" src="https://assets.mixkit.co/sfx/preview/mixkit-magical-coin-win-1936.mp3" preload="auto"></audio>
+    <div id="startOverlay" class="start-overlay" style="display: none;">
+        <div class="start-message">
+            <h1>👆</h1>
+            <p>화면을 터치해서 퀴즈를 시작하세요!</p>
+        </div>
+    </div>
 
     <div id="setupArea" class="setup-area">
         <h2>🎨 쓱싹 퀴즈 사진 올리기</h2>
@@ -35,38 +38,33 @@
         </header>
 
         <main class="main-content">
-            <div class="bg-dot left"></div>
-            <div class="bg-dot right"></div>
-            
-            <div id="gameScreen" class="screen-content">
-                <div class="play-area">
-                    <button id="btnPrev" class="nav-arrow left-arrow">❮</button>
-                    
-                    <div class="canvas-wrapper">
-                        <canvas id="imageCanvas"></canvas>
-                        <canvas id="eraserCanvas"></canvas>
-                        <div id="imageLabel" class="image-label" style="display: none;">사진1</div>
-                    </div>
-
-                    <div class="eraser-slider-container">
-                        <label for="eraserSize">지우개<br>크기</label>
-                        <input type="range" id="eraserSize" min="10" max="150" value="150" orient="vertical">
-                    </div>
-
-                    <button id="btnNext" class="nav-arrow right-arrow">❯</button>
+            <div class="play-area">
+                <button id="btnPrev" class="nav-arrow left-arrow">❮</button>
+                
+                <div class="canvas-wrapper">
+                    <canvas id="imageCanvas"></canvas>
+                    <canvas id="eraserCanvas"></canvas>
+                    <div id="imageLabel" class="image-label" style="display: none;">사진1</div>
                 </div>
 
-                <div class="bottom-controls">
-                    <button id="btnCheckAnswer" class="check-btn">✔️ 정답 확인</button>
-                    
-                    <div id="actionButtons" class="action-buttons" style="display: none;">
-                        <button id="btnMoreGames" class="end-btn">게임 더 보기</button>
-                        <button id="btnRetry" class="end-btn">↻ 다시 하기</button>
-                    </div>
-
-                    <div class="number-label">사진 선택 :</div>
-                    <div id="numberSelectors" class="number-selectors"></div>
+                <div class="eraser-slider-container">
+                    <label for="eraserSize">지우개<br>크기</label>
+                    <input type="range" id="eraserSize" min="10" max="150" value="150" orient="vertical">
                 </div>
+
+                <button id="btnNext" class="nav-arrow right-arrow">❯</button>
+            </div>
+
+            <div class="bottom-controls">
+                <button id="btnCheckAnswer" class="check-btn">✔️ 정답 확인</button>
+                
+                <div id="actionButtons" class="action-buttons" style="display: none;">
+                    <button id="btnMoreGames" class="end-btn">게임 더 보기</button>
+                    <button id="btnRetry" class="end-btn">↻ 다시 하기</button>
+                </div>
+
+                <div class="number-label">사진 선택 :</div>
+                <div id="numberSelectors" class="number-selectors"></div>
             </div>
         </main>
     </div>

@@ -10,6 +10,19 @@ html, body {
 
 body { display: flex; justify-content: center; align-items: center; }
 
+/* 오디오 권한 잠금 해제용 시작 오버레이 */
+.start-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); z-index: 9999;
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer;
+}
+.start-message { text-align: center; color: white; animation: pulse 1.5s infinite; }
+.start-message h1 { font-size: 80px; margin: 0; }
+.start-message p { font-size: 32px; font-weight: bold; margin-top: 10px; }
+@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+/* 설정 화면 */
 .setup-area {
     text-align: center; background: white; padding: 40px 60px; 
     border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
@@ -20,6 +33,7 @@ body { display: flex; justify-content: center; align-items: center; }
 .upload-btn { display: inline-block; background: #8b51ff; color: white; padding: 12px 35px; border-radius: 30px; font-size: 20px; cursor: pointer; margin: 15px 0; }
 .setup-btn { padding: 10px 30px; font-size: 18px; font-family: 'Jua'; background: #4caf50; color: white; border: none; cursor: pointer; border-radius: 20px; }
 
+/* 메인 컨테이너 */
 .app-container { width: 100%; height: 100%; background-color: #f6c445; display: flex; flex-direction: column; }
 
 header {
@@ -33,15 +47,11 @@ header {
 .icon-btn { background: #c1e3ff; border: 2px solid #333; border-radius: 15px; padding: 3px 10px; cursor: pointer; }
 .header-checks { display: flex; gap: 5px; color: white; margin-left: 5px; cursor: pointer; }
 
+/* 플레이 화면 꽉 차게 */
 .main-content {
-    flex: 1; display: flex; flex-direction: column; align-items: center; 
-    padding: 30px 80px 15px 40px; 
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px 80px 10px 40px; 
     box-sizing: border-box; overflow: hidden;
-}
-
-.screen-content { 
-    width: 100%; height: 100%; 
-    display: flex; flex-direction: column; align-items: center; 
 }
 
 .play-area { 
@@ -77,13 +87,9 @@ header {
 .left-arrow { left: -20px; }
 .right-arrow { right: -20px; }
 
-.bg-dot { position: absolute; top: 20%; width: 150px; height: 300px; background-image: radial-gradient(#d4a331 20%, transparent 20%); background-size: 10px 10px; opacity: 0.5; pointer-events: none; }
-.bg-dot.left { left: -30px; border-radius: 0 100px 100px 0; }
-.bg-dot.right { right: -30px; border-radius: 100px 0 0 100px; top: 60%; }
-
 .bottom-controls { 
     display: flex; justify-content: center; align-items: center; 
-    gap: 15px; margin-top: 15px; flex-shrink: 0; z-index: 10;
+    gap: 15px; margin-top: 10px; flex-shrink: 0; z-index: 10;
 }
 .check-btn { 
     background: #fff; color: #333; border: 3px solid #333; 
