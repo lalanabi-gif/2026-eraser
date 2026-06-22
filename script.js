@@ -22,7 +22,6 @@ const btnRetry = document.getElementById('btnRetry');
 const btnMoreGames = document.getElementById('btnMoreGames');
 
 const bgm = document.getElementById('bgm');
-const sfxErase = document.getElementById('sfxErase');
 const sfxSuccess = document.getElementById('sfxSuccess');
 const bgmCheck = document.getElementById('bgmCheck');
 const sfxCheck = document.getElementById('sfxCheck');
@@ -32,7 +31,6 @@ let currentIdx = 0;
 let isDrawing = false;
 let isAnswerRevealed = false;
 let eraserSize = parseInt(eraserSizeInput.value); 
-let lastSfxTime = 0; // 마법 소리 자연스러운 재생을 위한 타이머
 
 const DB_NAME = 'EraserKidsDB';
 const STORE_NAME = 'imageStore';
@@ -83,11 +81,12 @@ async function clearImages() {
     } catch (e) { console.warn("DB 삭제 차단됨"); }
 }
 
+// 배경음악 안전 재생 함수 (화면 터치 시 자동 재생되도록 연결)
 function playBgmSafely() {
     if(bgmCheck.checked && bgm.paused) {
         bgm.play().catch(() => {
             document.body.addEventListener('click', () => {
-                if(bgmCheck.checked && bgm.paused) bgm.play();
+                if(bgmCheck.checked && bgm.paused) bgm.play().catch(e => console.log(e));
             }, { once: true });
         });
     }
@@ -161,7 +160,7 @@ function skipSetupAndStart() {
     setupArea.style.display = 'none';
     appContainer.style.display = 'flex';
     createNumberTabs();
-    playBgmSafely();
+    playBgmSafely(); // 게임 진입 시 배경음악 실행
     setupStage(0);
 }
 
@@ -239,7 +238,7 @@ function getMousePos(e) {
 function startDrawing(e) {
     if(isAnswerRevealed) return;
     isDrawing = true;
-    playBgmSafely(); 
+    playBgmSafely(); // 유저 액션 시 브금 재생 시도
     draw(e);
 }
 
@@ -259,14 +258,7 @@ function draw(e) {
         eraserCtx.arc(dotX, dotY, dotSize, 0, Math.PI * 2);
         eraserCtx.fill();
     }
-
-    // 샤라랑~ 마법 가루 소리가 부드럽게 이어지도록 재생 간격 조정 (0.3초)
-    const now = Date.now();
-    if(sfxCheck.checked && (now - lastSfxTime > 300)) {
-        sfxErase.currentTime = 0;
-        sfxErase.play().catch(()=>{});
-        lastSfxTime = now;
-    }
+    // 지우개 효과음이 나오는 코드는 완전히 삭제되었습니다.
 }
 
 function stopDrawing() { isDrawing = false; }
@@ -287,9 +279,9 @@ function revealAnswer() {
     
     eraserCtx.clearRect(0, 0, eraserCanvas.width, eraserCanvas.height);
     
-    // 정답 확인 시 요술봉 뾰로롱! 소리 재생
+    // 정답 확인 시 요술봉 뾰로롱! 효과음 재생
     if(sfxCheck.checked) {
         sfxSuccess.currentTime = 0;
-        sfxSuccess.play().catch(()=>{});
+        sfxSuccess.play().catch(e => console.log("사운드 재생 오류:", e));
     }
 }
