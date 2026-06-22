@@ -26,7 +26,7 @@ let images = [];
 let currentIdx = 0;
 let isDrawing = false;
 let isAnswerRevealed = false;
-let eraserSize = parseInt(eraserSizeInput.value); 
+let eraserSize = parseInt(eraserSizeInput.value); // HTML의 기본값(150)을 그대로 가져옵니다.
 let lastSfxTime = 0; 
 
 // ==========================================
@@ -41,13 +41,13 @@ function initAudio() {
     audioCtx = new AudioContext();
 }
 
-// 1. 귀여운 통통 퍼즐 브금 (C장조 멜로디 반복)
+// 1. 귀여운 통통 퍼즐 브금
 function playBGM() {
     if (!audioCtx) initAudio();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     if (bgmInterval) return;
 
-    const melody = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63]; // 도미솔도솔미
+    const melody = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63]; 
     let i = 0;
     bgmInterval = setInterval(() => {
         if (!bgmCheck.checked || audioCtx.state === 'suspended') return;
@@ -60,7 +60,7 @@ function playBGM() {
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + 0.3);
         i++;
-    }, 400); // 0.4초 간격 경쾌한 리듬
+    }, 400); 
 }
 
 function stopBGM() {
@@ -68,37 +68,41 @@ function stopBGM() {
     bgmInterval = null;
 }
 
-// 2. 뾱! 뾱! 물방울 터지는 귀여운 지우개 효과음
-function playPop() {
+// 2. 샤사라랑~! 요정의 마법 가루 (지우개 효과음)
+function playSparkle() {
     if (!sfxCheck.checked || !audioCtx || audioCtx.state === 'suspended') return;
     const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(800, now);
-    osc.frequency.exponentialRampToValueAtTime(300, now + 0.1); // 음이 빠르게 떨어지며 뾱 소리 생성
-    gain.gain.setValueAtTime(0.15, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(now); osc.stop(now + 0.1);
+    // 아주 높고 영롱한 음계 (글로켄슈필/마법 느낌)
+    const notes = [1567.98, 2093.00, 2637.02, 3135.96]; 
+    notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        const startTime = now + i * 0.04; // 매우 빠르게 차라락!
+        osc.frequency.setValueAtTime(freq, startTime);
+        gain.gain.setValueAtTime(0.06, startTime); // 소리가 너무 크지 않게 조절
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.3);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(startTime); osc.stop(startTime + 0.3);
+    });
 }
 
-// 3. 뾰로롱~! 마법의 요술봉 정답 효과음 (아르페지오)
+// 3. 뾰로롱~! 크고 기분 좋은 요술봉 (정답 효과음)
 function playMagicWand() {
     if (!sfxCheck.checked || !audioCtx || audioCtx.state === 'suspended') return;
     const now = audioCtx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98]; // 위로 올라가는 화음
+    const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; 
     
     notes.forEach((freq, i) => {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sine';
-        const startTime = now + i * 0.06; // 차르르륵 올라가는 효과
+        const startTime = now + i * 0.08; 
         osc.frequency.setValueAtTime(freq, startTime);
         gain.gain.setValueAtTime(0.15, startTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.4);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.8);
         osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(startTime); osc.stop(startTime + 0.4);
+        osc.start(startTime); osc.stop(startTime + 0.8);
     });
 }
 
@@ -158,7 +162,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     images = await loadImages();
     if (images && images.length > 0) {
         setupArea.style.display = 'none';
-        startOverlay.style.display = 'flex'; // 자동 로드 시 무조건 터치 유도창 띄움
+        startOverlay.style.display = 'flex'; 
     }
 });
 
@@ -221,7 +225,7 @@ imageLoader.addEventListener('change', async (e) => {
     uploadStatus.innerText = "준비 완료!";
     setTimeout(() => { 
         setupArea.style.display = 'none';
-        startOverlay.style.display = 'flex'; // 업로드 직후에도 터치 유도
+        startOverlay.style.display = 'flex'; 
     }, 500);
 });
 
@@ -317,10 +321,10 @@ function draw(e) {
         eraserCtx.fill();
     }
 
-    // 0.2초마다 귀여운 뾱 소리 재생
+    // 0.3초마다 겹치지 않게 '샤사라랑~' 마법 효과음 재생
     const now = Date.now();
-    if(now - lastSfxTime > 200) {
-        playPop();
+    if(now - lastSfxTime > 300) {
+        playSparkle();
         lastSfxTime = now;
     }
 }
@@ -342,6 +346,6 @@ function revealAnswer() {
     imageLabel.style.display = 'block';
     eraserCtx.clearRect(0, 0, eraserCanvas.width, eraserCanvas.height);
     
-    // 정답 확인 시 마법의 요술봉 소리 재생
+    // 정답 확인 시 요술봉 뾰로롱 소리 재생!
     playMagicWand();
 }
