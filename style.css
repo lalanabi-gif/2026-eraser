@@ -49,10 +49,8 @@ header {
     display: flex; justify-content: center; align-items: center; min-height: 0; 
 }
 
-/* 화면 붕괴 방지용 핵심 코드: 가로세로 비율(8:5)을 강제로 고정하여 절대 깨지지 않게 만듭니다. */
 .canvas-wrapper { 
-    width: 100%; max-width: 800px;
-    aspect-ratio: 8 / 5; 
+    width: 100%; height: 100%; 
     background-color: transparent; 
     position: relative; 
     display: flex; justify-content: center; align-items: center;

@@ -31,37 +31,9 @@ let images = [];
 let currentIdx = 0;
 let isDrawing = false;
 let isAnswerRevealed = false;
-let eraserSize = 150; // 지우개 기본 크기 최대치 고정
-let lastSfxTime = 0;
-let audioUnlocked = false;
+let eraserSize = parseInt(eraserSizeInput.value); // HTML에서 150으로 설정된 값을 가져옴
+let lastSfxTime = 0; // 지우개 소리 겹침 방지 타이머
 
-// --- 브라우저 오디오 권한 강제 해제 장치 ---
-function unlockAudio() {
-    if (audioUnlocked) return;
-    [bgm, sfxErase, sfxSuccess].forEach(audio => {
-        audio.muted = true;
-        audio.play().then(() => {
-            audio.pause();
-            audio.currentTime = 0;
-            audio.muted = false;
-        }).catch(e => console.warn("오디오 대기 중"));
-    });
-    audioUnlocked = true;
-    
-    if (bgmCheck.checked && appContainer.style.display === 'flex') {
-        bgm.play().catch(()=>{});
-    }
-}
-// 선생님이나 아이들이 화면을 최초로 터치/클릭하는 순간 오디오 잠금 해제!
-document.body.addEventListener('pointerdown', unlockAudio, { once: true });
-
-function playBgmSafely() {
-    if(bgmCheck.checked && bgm.paused && audioUnlocked) {
-        bgm.play().catch(()=>{});
-    }
-}
-
-// --- 데이터베이스 ---
 const DB_NAME = 'EraserKidsDB';
 const STORE_NAME = 'imageStore';
 
@@ -85,7 +57,7 @@ async function saveImages(imagesArray) {
             tx.objectStore(STORE_NAME).put(imagesArray, 'current_session');
             tx.oncomplete = () => resolve();
         });
-    } catch (e) {}
+    } catch (e) { console.warn("DB 저장 차단됨"); }
 }
 
 async function loadImages() {
@@ -108,7 +80,17 @@ async function clearImages() {
             tx.objectStore(STORE_NAME).delete('current_session');
             tx.oncomplete = () => resolve();
         });
-    } catch (e) {}
+    } catch (e) { console.warn("DB 삭제 차단됨"); }
+}
+
+function playBgmSafely() {
+    if(bgmCheck.checked && bgm.paused) {
+        bgm.play().catch(() => {
+            document.body.addEventListener('click', () => {
+                if(bgmCheck.checked && bgm.paused) bgm.play();
+            }, { once: true });
+        });
+    }
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -140,35 +122,36 @@ function compressImage(file) {
 
                 canvas.width = w; canvas.height = h;
                 ctx.drawImage(img, 0, 0, w, h);
-                resolve(canvas.toDataURL('image/jpeg', 0.8));
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
             };
             img.onerror = () => resolve(null); 
             img.src = e.target.result;
         };
+        reader.onerror = () => resolve(null);
         reader.readAsDataURL(file);
     });
 }
 
-// 업로드 이벤트
 imageLoader.addEventListener('change', async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     
-    uploadStatus.innerText = "사진을 설정하고 있습니다...";
+    uploadStatus.innerText = "사진을 최적화하고 있습니다. 잠시만 기다려주세요...";
     images = [];
 
-    for (let i = 0; i < files.length; i++) {
-        const compressed = await compressImage(files[i]);
-        if (compressed) images.push(compressed);
-    }
-
-    if (images.length > 0) {
-        saveImages(images); 
+    try {
+        for (let i = 0; i < files.length; i++) {
+            const compressed = await compressImage(files[i]);
+            if (compressed) images.push(compressed);
+        }
+        if (images.length === 0) {
+            uploadStatus.innerText = "처리 실패"; return;
+        }
+        await saveImages(images);
         uploadStatus.innerText = "준비 완료!";
-        // 사진이 압축되자마자 0.2초 뒤 무조건 게임 화면으로 전환되도록 강제
-        setTimeout(() => { skipSetupAndStart(); }, 200);
-    } else {
-        uploadStatus.innerText = "처리 실패. 다른 사진을 올려주세요.";
+        setTimeout(() => { skipSetupAndStart(); }, 500);
+    } catch (error) {
+        if (images.length > 0) setTimeout(() => { skipSetupAndStart(); }, 500);
     }
 });
 
@@ -178,7 +161,7 @@ function skipSetupAndStart() {
     setupArea.style.display = 'none';
     appContainer.style.display = 'flex';
     createNumberTabs();
-    playBgmSafely(); 
+    playBgmSafely();
     setupStage(0);
 }
 
@@ -188,18 +171,24 @@ function createNumberTabs() {
         const btn = document.createElement('div');
         btn.className = 'num-circle';
         btn.innerText = i + 1;
-        btn.onclick = () => { playBgmSafely(); setupStage(i); };
+        btn.onclick = () => setupStage(i);
         numberSelectors.appendChild(btn);
     }
 }
 
 bgmCheck.addEventListener('change', (e) => { e.target.checked ? playBgmSafely() : bgm.pause(); });
-btnPrev.addEventListener('click', () => { playBgmSafely(); if(currentIdx > 0) setupStage(currentIdx - 1); });
-btnNext.addEventListener('click', () => { playBgmSafely(); if(currentIdx < images.length - 1) setupStage(currentIdx + 1); });
-btnRetry.addEventListener('click', () => { playBgmSafely(); setupStage(currentIdx); });
+btnPrev.addEventListener('click', () => { if(currentIdx > 0) setupStage(currentIdx - 1); });
+btnNext.addEventListener('click', () => { if(currentIdx < images.length - 1) setupStage(currentIdx + 1); });
+btnRetry.addEventListener('click', () => setupStage(currentIdx));
 btnMoreGames.addEventListener('click', () => alert('첫 화면으로 돌아갑니다.'));
 btnCheckAnswer.addEventListener('click', revealAnswer);
 eraserSizeInput.addEventListener('input', (e) => { eraserSize = parseInt(e.target.value); });
+
+window.addEventListener('resize', () => {
+    if(appContainer.style.display === 'flex' && images.length > 0) {
+        setupStage(currentIdx);
+    }
+});
 
 function setupStage(index) {
     currentIdx = index;
@@ -215,9 +204,9 @@ function setupStage(index) {
 
     document.querySelectorAll('.num-circle').forEach((tab, i) => tab.classList.toggle('active', i === currentIdx));
 
-    // 화면 비율 붕괴 및 사진 안보임 완벽 해결 코드 (고정 해상도 사용)
-    const cw = 800;
-    const ch = 500;
+    const wrapper = document.querySelector('.canvas-wrapper');
+    const cw = wrapper.clientWidth;
+    const ch = wrapper.clientHeight;
     
     imageCanvas.width = cw; imageCanvas.height = ch;
     eraserCanvas.width = cw; eraserCanvas.height = ch;
@@ -250,7 +239,7 @@ function getMousePos(e) {
 function startDrawing(e) {
     if(isAnswerRevealed) return;
     isDrawing = true;
-    unlockAudio(); // 지우개 터치 시 오디오 강제 해제
+    playBgmSafely(); 
     draw(e);
 }
 
@@ -271,9 +260,9 @@ function draw(e) {
         eraserCtx.fill();
     }
 
-    // 샤사라랑~ 마법 가루 효과음 재생! (0.3초 쿨타임으로 소리가 예쁘게 이어짐)
+    // 0.15초 간격으로 산뜻한 '뽁뽁뽁' 효과음 재생 (소리가 시끄럽게 겹치는 것 방지)
     const now = Date.now();
-    if(sfxCheck.checked && audioUnlocked && (now - lastSfxTime > 300)) {
+    if(sfxCheck.checked && (now - lastSfxTime > 150)) {
         sfxErase.currentTime = 0;
         sfxErase.play().catch(()=>{});
         lastSfxTime = now;
@@ -292,15 +281,14 @@ window.addEventListener('touchend', stopDrawing);
 
 function revealAnswer() {
     isAnswerRevealed = true;
-    
     btnCheckAnswer.style.display = 'none';
     actionButtons.style.display = 'flex';
     imageLabel.style.display = 'block';
     
     eraserCtx.clearRect(0, 0, eraserCanvas.width, eraserCanvas.height);
     
-    // 정답 확인 시 요술봉 뾰로롱 효과음!
-    if(sfxCheck.checked && audioUnlocked) {
+    // 정답 확인 시 딩동댕 소리 재생
+    if(sfxCheck.checked) {
         sfxSuccess.currentTime = 0;
         sfxSuccess.play().catch(()=>{});
     }
