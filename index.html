@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>싹싹 지우개 게임</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <audio id="bgm" src="https://upload.wikimedia.org/wikipedia/commons/4/41/Bassa_Island_Game_Loop.ogg" loop preload="auto"></audio>
+    <audio id="sfxSuccess" src="https://actions.google.com/sounds/v1/cartoon/magic_chime.ogg" preload="auto"></audio>
+    <audio id="sfxErase" src="https://assets.mixkit.co/sfx/preview/mixkit-magic-glitter-strike-2125.mp3" preload="auto"></audio>
+
+    <div id="setupArea" class="setup-area">
+        <h2>🎨 쓱싹 퀴즈 사진 올리기</h2>
+        <p>문제를 내고 싶은 사진을 먼저 선택해 주세요!</p>
+        <input type="file" id="imageLoader" accept="image/*" multiple>
+        <label for="imageLoader" class="upload-btn">📷 사진 고르기</label>
+        <p id="uploadStatus"></p>
+        <button id="btnInitStart" class="setup-btn" style="display: none;">게임 시작하기 ▶</button>
+    </div>
+
+    <div class="app-container" id="appContainer" style="display: none;">
+        <header>
+            <div class="header-left">상세보기</div>
+            <div class="header-right">
+                <button id="btnResetImages" class="reset-btn">🔄 새 사진 올리기</button>
+                <button class="icon-btn">🧽</button>
+                <button class="icon-btn">🔊</button>
+                <div class="header-checks">
+                    <label><input type="checkbox" id="bgmCheck" checked> 배경음</label>
+                    <label><input type="checkbox" id="sfxCheck" checked> 효과음</label>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="bg-dot left"></div>
+            <div class="bg-dot right"></div>
+            
+            <div id="gameScreen" class="screen-content">
+                <div class="play-area">
+                    <button id="btnPrev" class="nav-arrow left-arrow">❮</button>
+                    
+                    <div class="canvas-wrapper">
+                        <canvas id="imageCanvas"></canvas>
+                        <canvas id="eraserCanvas"></canvas>
+                        <div id="imageLabel" class="image-label" style="display: none;">사진1</div>
+                    </div>
+
+                    <div class="eraser-slider-container">
+                        <label for="eraserSize">지우개<br>크기</label>
+                        <input type="range" id="eraserSize" min="10" max="150" value="150" orient="vertical">
+                    </div>
+
+                    <button id="btnNext" class="nav-arrow right-arrow">❯</button>
+                </div>
+
+                <div class="bottom-controls">
+                    <button id="btnCheckAnswer" class="check-btn">✔️ 정답 확인</button>
+                    
+                    <div id="actionButtons" class="action-buttons" style="display: none;">
+                        <button id="btnMoreGames" class="end-btn">게임 더 보기</button>
+                        <button id="btnRetry" class="end-btn">↻ 다시 하기</button>
+                    </div>
+
+                    <div class="number-label">사진 선택 :</div>
+                    <div id="numberSelectors" class="number-selectors
