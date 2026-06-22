@@ -1,11 +1,11 @@
 const setupArea = document.getElementById('setupArea');
 const appContainer = document.getElementById('appContainer');
-const startOverlay = document.getElementById('startOverlay');
 const imageLoader = document.getElementById('imageLoader');
 const uploadStatus = document.getElementById('uploadStatus');
 const btnInitStart = document.getElementById('btnInitStart');
 const btnResetImages = document.getElementById('btnResetImages');
 
+const gameScreen = document.getElementById('gameScreen');
 const imageCanvas = document.getElementById('imageCanvas');
 const imageCtx = imageCanvas.getContext('2d', { willReadFrequently: true });
 const eraserCanvas = document.getElementById('eraserCanvas');
@@ -22,7 +22,6 @@ const btnRetry = document.getElementById('btnRetry');
 const btnMoreGames = document.getElementById('btnMoreGames');
 
 const bgm = document.getElementById('bgm');
-const sfxErase = document.getElementById('sfxErase');
 const sfxSuccess = document.getElementById('sfxSuccess');
 const bgmCheck = document.getElementById('bgmCheck');
 const sfxCheck = document.getElementById('sfxCheck');
@@ -31,40 +30,8 @@ let images = [];
 let currentIdx = 0;
 let isDrawing = false;
 let isAnswerRevealed = false;
-let eraserSize = 150; // 지우개 기본 크기 최대치(150)
-let lastSfxTime = 0;
-let audioUnlocked = false;
+let eraserSize = parseInt(eraserSizeInput.value);
 
-// --- 브라우저 오디오 권한 강제 해제 장치 ---
-function unlockAudio() {
-    if (audioUnlocked) return;
-    [bgm, sfxErase, sfxSuccess].forEach(audio => {
-        audio.muted = true;
-        audio.play().then(() => {
-            audio.pause();
-            audio.currentTime = 0;
-            audio.muted = false;
-        }).catch(e => console.warn("오디오 대기 중"));
-    });
-    audioUnlocked = true;
-    
-    if (bgmCheck.checked && appContainer.style.display === 'flex') {
-        bgm.play().catch(()=>{});
-    }
-}
-
-// 선생님이나 아이들이 화면을 최초로 터치/클릭하는 순간 오디오 잠금 해제!
-document.body.addEventListener('pointerdown', unlockAudio, { once: true });
-startOverlay.addEventListener('click', () => {
-    unlockAudio();
-    startOverlay.style.display = 'none';
-    appContainer.style.display = 'flex';
-    createNumberTabs();
-    if (bgmCheck.checked) bgm.play().catch(()=>{});
-    setupStage(0);
-});
-
-// --- 데이터베이스 ---
 const DB_NAME = 'EraserKidsDB';
 const STORE_NAME = 'imageStore';
 
@@ -88,7 +55,7 @@ async function saveImages(imagesArray) {
             tx.objectStore(STORE_NAME).put(imagesArray, 'current_session');
             tx.oncomplete = () => resolve();
         });
-    } catch (e) {}
+    } catch (e) { console.warn("DB 저장 차단됨"); }
 }
 
 async function loadImages() {
@@ -111,14 +78,25 @@ async function clearImages() {
             tx.objectStore(STORE_NAME).delete('current_session');
             tx.oncomplete = () => resolve();
         });
-    } catch (e) {}
+    } catch (e) { console.warn("DB 삭제 차단됨"); }
+}
+
+// 사운드 재생 헬퍼 함수
+function playBgmSafely() {
+    if(bgmCheck.checked && bgm.paused) {
+        bgm.play().catch(() => {
+            // 브라우저가 막으면 사용자 클릭 시 대기했다가 재생
+            document.body.addEventListener('click', () => {
+                if(bgmCheck.checked && bgm.paused) bgm.play();
+            }, { once: true });
+        });
+    }
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
     images = await loadImages();
     if (images && images.length > 0) {
-        setupArea.style.display = 'none';
-        startOverlay.style.display = 'flex';
+        skipSetupAndStart();
     }
 });
 
@@ -144,44 +122,48 @@ function compressImage(file) {
 
                 canvas.width = w; canvas.height = h;
                 ctx.drawImage(img, 0, 0, w, h);
-                resolve(canvas.toDataURL('image/jpeg', 0.8));
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
             };
             img.onerror = () => resolve(null); 
             img.src = e.target.result;
         };
+        reader.onerror = () => resolve(null);
         reader.readAsDataURL(file);
     });
 }
 
-// 사진 선택 시 오류 해결 (즉각적으로 오버레이 화면으로 넘어가게 강제)
 imageLoader.addEventListener('change', async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     
-    uploadStatus.innerText = "사진을 처리하고 있습니다. 잠시만 기다려주세요...";
+    uploadStatus.innerText = "사진을 최적화하고 있습니다. 잠시만 기다려주세요...";
     images = [];
 
-    for (let i = 0; i < files.length; i++) {
-        const compressed = await compressImage(files[i]);
-        if (compressed) images.push(compressed);
-    }
-
-    if (images.length > 0) {
-        saveImages(images); 
+    try {
+        for (let i = 0; i < files.length; i++) {
+            const compressed = await compressImage(files[i]);
+            if (compressed) images.push(compressed);
+        }
+        if (images.length === 0) {
+            uploadStatus.innerText = "처리 실패"; return;
+        }
+        await saveImages(images);
         uploadStatus.innerText = "준비 완료!";
-        setTimeout(() => { 
-            setupArea.style.display = 'none';
-            startOverlay.style.display = 'flex'; 
-        }, 300);
-    } else {
-        uploadStatus.innerText = "처리 실패. 다른 사진을 올려주세요.";
+        setTimeout(() => { skipSetupAndStart(); }, 500);
+    } catch (error) {
+        if (images.length > 0) setTimeout(() => { skipSetupAndStart(); }, 500);
     }
 });
 
-btnInitStart.addEventListener('click', () => {
+btnInitStart.addEventListener('click', skipSetupAndStart);
+
+function skipSetupAndStart() {
     setupArea.style.display = 'none';
-    startOverlay.style.display = 'flex';
-});
+    appContainer.style.display = 'flex';
+    createNumberTabs();
+    playBgmSafely();
+    setupStage(0);
+}
 
 function createNumberTabs() {
     numberSelectors.innerHTML = '';
@@ -189,15 +171,15 @@ function createNumberTabs() {
         const btn = document.createElement('div');
         btn.className = 'num-circle';
         btn.innerText = i + 1;
-        btn.onclick = () => { setupStage(i); };
+        btn.onclick = () => setupStage(i);
         numberSelectors.appendChild(btn);
     }
 }
 
-bgmCheck.addEventListener('change', (e) => { e.target.checked && audioUnlocked ? bgm.play() : bgm.pause(); });
+bgmCheck.addEventListener('change', (e) => { e.target.checked ? playBgmSafely() : bgm.pause(); });
 btnPrev.addEventListener('click', () => { if(currentIdx > 0) setupStage(currentIdx - 1); });
 btnNext.addEventListener('click', () => { if(currentIdx < images.length - 1) setupStage(currentIdx + 1); });
-btnRetry.addEventListener('click', () => { setupStage(currentIdx); });
+btnRetry.addEventListener('click', () => setupStage(currentIdx));
 btnMoreGames.addEventListener('click', () => alert('첫 화면으로 돌아갑니다.'));
 btnCheckAnswer.addEventListener('click', revealAnswer);
 eraserSizeInput.addEventListener('input', (e) => { eraserSize = parseInt(e.target.value); });
@@ -222,16 +204,16 @@ function setupStage(index) {
 
     document.querySelectorAll('.num-circle').forEach((tab, i) => tab.classList.toggle('active', i === currentIdx));
 
-    // [사진 안 보임 & 화면 붕괴 오류 완벽 해결]
-    // 캔버스 내부 해상도를 항상 고정값(800x500)으로 강제하여 사진이 절대 사라지지 않게 만듭니다!
-    const cw = 800;
-    const ch = 500;
+    const wrapper = document.querySelector('.canvas-wrapper');
+    const cw = wrapper.clientWidth;
+    const ch = wrapper.clientHeight;
     
     imageCanvas.width = cw; imageCanvas.height = ch;
     eraserCanvas.width = cw; eraserCanvas.height = ch;
 
     const img = new Image();
     img.onload = () => {
+        // 이미지 비율 유지 크기 계산
         const scale = Math.min(cw / img.width, ch / img.height);
         const w = img.width * scale; const h = img.height * scale;
         const dx = (cw - w) / 2; const dy = (ch - h) / 2;
@@ -240,9 +222,9 @@ function setupStage(index) {
         imageCtx.drawImage(img, dx, dy, w, h);
         
         eraserCtx.globalCompositeOperation = 'source-over';
+        // 핵심 수정: 캔버스 전체가 아니라, '사진이 그려진 영역'에만 정확히 가림막을 씌웁니다!
         eraserCtx.clearRect(0, 0, cw, ch);
         eraserCtx.fillStyle = '#463e30'; 
-        // 사진이 있는 구역만 완벽하게 덮어서 흰 배경이 절대 보이지 않게 처리
         eraserCtx.fillRect(dx, dy, w, h);
     };
     img.src = images[currentIdx];
@@ -251,16 +233,15 @@ function setupStage(index) {
 function getMousePos(e) {
     const rect = eraserCanvas.getBoundingClientRect();
     return {
-        // 내부 해상도(800x500)에 맞게 마우스 좌표를 완벽히 매칭시킵니다.
-        x: (e.clientX - rect.left) * (800 / rect.width),
-        y: (e.clientY - rect.top) * (500 / rect.height)
+        x: (e.clientX - rect.left) * (eraserCanvas.width / rect.width),
+        y: (e.clientY - rect.top) * (eraserCanvas.height / rect.height)
     };
 }
 
 function startDrawing(e) {
     if(isAnswerRevealed) return;
     isDrawing = true;
-    unlockAudio(); 
+    playBgmSafely(); // 클릭 시 오디오 차단 해제 유도
     draw(e);
 }
 
@@ -280,14 +261,6 @@ function draw(e) {
         eraserCtx.arc(dotX, dotY, dotSize, 0, Math.PI * 2);
         eraserCtx.fill();
     }
-
-    // 샤사라랑~ 마법 가루 효과음 재생! (0.3초 간격으로 소리가 예쁘게 이어짐)
-    const now = Date.now();
-    if(sfxCheck.checked && audioUnlocked && (now - lastSfxTime > 300)) {
-        sfxErase.currentTime = 0;
-        sfxErase.play().catch(()=>{});
-        lastSfxTime = now;
-    }
 }
 
 function stopDrawing() { isDrawing = false; }
@@ -302,16 +275,16 @@ window.addEventListener('touchend', stopDrawing);
 
 function revealAnswer() {
     isAnswerRevealed = true;
-    
     btnCheckAnswer.style.display = 'none';
     actionButtons.style.display = 'flex';
     imageLabel.style.display = 'block';
     
+    // 남은 가림막 지우기
     eraserCtx.clearRect(0, 0, eraserCanvas.width, eraserCanvas.height);
     
-    // 정답 확인 시 요술봉 뾰로롱 효과음!
-    if(sfxCheck.checked && audioUnlocked) {
+    // 정답 확인 시 설정이 켜져있다면 딩동댕 소리 재생!
+    if(sfxCheck.checked) {
         sfxSuccess.currentTime = 0;
-        sfxSuccess.play().catch(e => console.log("정답 효과음 재생 오류"));
+        sfxSuccess.play().catch(()=>{});
     }
 }
